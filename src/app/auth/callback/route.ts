@@ -15,7 +15,7 @@ function safeNext(value: string | null, fallback: string) {
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin).replace(/\/$/, "");
+  const base = request.nextUrl.origin;
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
