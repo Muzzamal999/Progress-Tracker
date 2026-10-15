@@ -725,7 +725,7 @@ $$;
 -- ===== function privileges: internal helpers are not callable through the API =====
 revoke all on function public.current_student_id(), public.my_class_id(), public.my_batch_id(),
   public._slugify(text), public._norm_title(text), public._norm_link(text), public._touch_review(),
-  public._check_attachments(jsonb, int, text) from public, anon;
+  public._check_attachments(jsonb, int, text) from public, anon, authenticated;
 grant execute on function public.current_student_id(), public.my_class_id(), public.my_batch_id() to authenticated; -- used inside RLS policies
 revoke all on function public._student_progress(uuid), public._sync_student_progress(uuid, boolean),
   public._submissions_sync_trg(), public._require_ready_student(), public.handle_new_user() from public, anon, authenticated;

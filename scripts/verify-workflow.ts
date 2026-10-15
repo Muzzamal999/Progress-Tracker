@@ -165,6 +165,10 @@ async function main() {
   const anon = mk(anonKey!);
   check("anonymous users cannot read students.user_id", !!(await anon.from("students").select("user_id").limit(1)).error);
   check("anonymous users can still read public student columns", !(await anon.from("students").select("id, slug, name, badge").limit(1)).error);
+  check("signed-in users cannot call internal helper functions", !!(await sc.rpc("_slugify", { t: "x" })).error && !!(await sc.rpc("_check_attachments", { a: [], min_n: 0, folder: "x" })).error);
+  const adminInsert = await admin.from("submissions").insert({ student_id: me!.id, title: "Admin inserted", link: "https://example.com/admin-inserted", attachments: evidence, status: "pending" }).select("id").single();
+  check("admin can still insert directly (unique-index helpers need no caller privilege)", !!adminInsert.data && !adminInsert.error, adminInsert.error);
+  if (adminInsert.data) await admin.from("submissions").delete().eq("id", adminInsert.data.id);
   check("anonymous users cannot call RLS helper functions", !!(await anon.rpc("current_student_id")).error);
   check("anonymous users cannot write to badge rules", ((await anon.from("badge_definitions").update({ name: "x" }).eq("level", "Gold").select()).data ?? []).length === 0);
   const none = await admin.rpc("save_badge_rules", { rules: rules!.map((x) => ({ level: x.level, name: x.name, position: x.position, required_projects: 3, certificate_eligible: true, is_active: false })) });
