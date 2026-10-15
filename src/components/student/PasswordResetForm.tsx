@@ -46,7 +46,7 @@ export function PasswordResetForm({ mode }: { mode: "request" | "update" }) {
       if (!/^\S+@\S+\.\S+$/.test(email)) return setError("Enter a valid email address");
       setBusy(true);
       try {
-        const { error: err } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${siteUrl()}/reset-password` });
+        const { error: err } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${siteUrl()}/auth/callback?next=/reset-password` });
         if (err) return setError(err.message);
         // Same message whether or not the account exists, so emails cannot be probed.
         setNotice("If an account exists for that email, a reset link is on its way. Check your inbox (and spam).");

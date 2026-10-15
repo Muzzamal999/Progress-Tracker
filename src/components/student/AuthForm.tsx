@@ -22,7 +22,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     if (!unconfirmed) return;
     setBusy(true);
     setError(null);
-    const { error: err } = await createClient().auth.resend({ type: "signup", email: unconfirmed, options: { emailRedirectTo: `${siteUrl()}/login` } });
+    const { error: err } = await createClient().auth.resend({ type: "signup", email: unconfirmed, options: { emailRedirectTo: `${siteUrl()}/auth/callback` } });
     setBusy(false);
     if (err) return setError(err.message);
     setResent(true);
@@ -51,7 +51,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         const { data, error: err } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { registration: "student", full_name: name }, emailRedirectTo: `${siteUrl()}/login` },
+          options: { data: { registration: "student", full_name: name }, emailRedirectTo: `${siteUrl()}/auth/callback` },
         });
         if (err) return setError(err.message.toLowerCase().includes("signups not allowed") ? "Registration is currently closed. Contact your administrator." : err.message);
         if (data.session) {
