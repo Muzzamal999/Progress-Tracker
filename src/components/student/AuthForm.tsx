@@ -35,7 +35,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         const { data, error: err } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { registration: "student", full_name: name }, emailRedirectTo: `${location.origin}/login` },
+          options: { data: { registration: "student", full_name: name }, emailRedirectTo: `${(process.env.NEXT_PUBLIC_SITE_URL || location.origin).replace(/\/$/, "")}/login` },
         });
         if (err) return setError(err.message.toLowerCase().includes("signups not allowed") ? "Registration is currently closed. Contact your administrator." : err.message);
         if (data.session) {
