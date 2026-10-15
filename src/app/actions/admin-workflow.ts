@@ -42,6 +42,7 @@ export async function reviewAction(raw: unknown): Promise<ActionResult> {
   if (!p.success) return bad(p.error);
   return guarded(async (sb) => {
     const { error } = await sb.rpc("review_item", { p_kind: p.data.kind, p_id: p.data.id, p_decision: p.data.decision, p_feedback: p.data.feedback });
+    if (error?.code === "23505") return { ok: false, error: "The student already has another pending or approved submission with the same title or link" };
     if (error) return fail(error);
     updateTag(STUDENTS_TAG); // approvals change the public board
     return { ok: true };

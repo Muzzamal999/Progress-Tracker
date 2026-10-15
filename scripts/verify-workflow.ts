@@ -129,6 +129,22 @@ async function main() {
   const dupLink = await sub("Different title", { link: "https://example.com/one" });
   check("duplicate link is rejected", dupLink.error?.code === "23505", dupLink.error);
 
+  // ---- duplicate detection is normalised, and evidence must be our own Cloudinary uploads ----
+  for (const t of ["project-one", "Project   ONE", "project_one"]) {
+    const d = await sub(t);
+    check(`title variant "${t}" counts as a duplicate`, d.error?.code === "23505", d.error);
+  }
+  for (const l of ["http://www.Example.com/one/", "https://example.com/one#readme", "HTTPS://EXAMPLE.com/one//"]) {
+    const d = await sub(`Other ${l.length}`, { link: l });
+    check(`link variant "${l}" counts as a duplicate`, d.error?.code === "23505", d.error);
+  }
+  const ext = await sc.rpc("submit_project", { p: proj("External evidence", { attachments: [{ url: "https://evil.example/x.png", public_id: "student-journey/evidence/x" }] }) });
+  check("evidence from a non-Cloudinary URL is refused", !!ext.error, ext.error?.message);
+  const wrongFolder = await sc.rpc("submit_project", { p: proj("Wrong folder", { attachments: [{ url: evidence[0].url, public_id: "student-journey/avatars/someone" }] }) });
+  check("evidence from the wrong Cloudinary folder is refused", !!wrongFolder.error, wrongFolder.error?.message);
+  const badAvatar = await sc.rpc("update_my_profile", { p: { name: "x", track: "Web", batch_id: batch!.id, image_url: "https://evil.example/a.png", image_public_id: "student-journey/avatars/a" } });
+  check("profile image from a non-Cloudinary URL is refused", !!badAvatar.error, badAvatar.error?.message);
+
   // ---- access control on direct API requests ----
   const direct = await sc.from("submissions").insert({ student_id: me!.id, title: "Cheat", attachments: evidence, status: "approved" });
   check("student cannot insert an approved submission directly", !!direct.error, direct.error?.message);
@@ -147,6 +163,12 @@ async function main() {
   const ins = await sc.from("admin_users").insert({ user_id: s.id });
   check("student cannot make themselves admin", !!ins.error, ins.error?.message);
   const anon = mk(anonKey!);
+  check("anonymous users cannot read students.user_id", !!(await anon.from("students").select("user_id").limit(1)).error);
+  check("anonymous users can still read public student columns", !(await anon.from("students").select("id, slug, name, badge").limit(1)).error);
+  check("anonymous users cannot call RLS helper functions", !!(await anon.rpc("current_student_id")).error);
+  check("anonymous users cannot write to badge rules", ((await anon.from("badge_definitions").update({ name: "x" }).eq("level", "Gold").select()).data ?? []).length === 0);
+  const none = await admin.rpc("save_badge_rules", { rules: rules!.map((x) => ({ level: x.level, name: x.name, position: x.position, required_projects: 3, certificate_eligible: true, is_active: false })) });
+  check("badge rules cannot all be deactivated", !!none.error, none.error?.message);
   check("anonymous users cannot read submissions", ((await anon.from("submissions").select("id")).data ?? []).length === 0);
   check("anonymous users cannot read certificates table", ((await anon.from("certificates").select("id")).data ?? []).length === 0);
   check("anonymous users cannot call student RPCs", !!(await anon.rpc("submit_project", { p: proj("x") })).error);

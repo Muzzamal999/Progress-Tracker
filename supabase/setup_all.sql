@@ -159,6 +159,10 @@ grant execute on function public.save_student(jsonb, jsonb) to authenticated;
 
 -- Student accounts, submissions with admin review, sequential badges and certificates.
 -- Additive: no existing table is dropped or truncated and no existing row is deleted.
+-- It does NOT recreate the base tables, enums or is_admin(). The only existing objects it touches are:
+--   * public.students   (adds 4 columns, makes `badge` nullable, swaps its public SELECT policy/grants)
+--   * public.save_student(jsonb, jsonb)  (replaced so admin edits never overwrite a registered student's badge)
+-- Run it ONCE, inside BEGIN; ... COMMIT; so any error leaves the database untouched.
 -- Existing students/projects keep working; `students.badge` becomes nullable so that a
 -- self-registered student starts with NO badge (nothing is pre-unlocked).
 
@@ -252,6 +256,18 @@ select b, b::text, ord::int, b <> 'Bronze'
 from unnest(enum_range(null::public.badge_level)) with ordinality as t(b, ord)
 on conflict (level) do nothing;
 
+-- ===== normalisation helpers (used for duplicate detection) =====
+-- "Todo App", "todo  app", "Todo-App" and "todo_app" are the same project title.
+create or replace function public._norm_title(t text) returns text
+language sql immutable as $$
+  select regexp_replace(lower(trim(coalesce(t, ''))), '[\s_-]+', ' ', 'g');
+$$;
+-- "https://www.GitHub.com/a/b/", "http://github.com/a/b" and "github.com/a/b#readme" are the same link.
+create or replace function public._norm_link(u text) returns text
+language sql immutable as $$
+  select nullif(regexp_replace(regexp_replace(regexp_replace(lower(trim(coalesce(u, ''))), '^https?://(www\.)?', ''), '#.*$', ''), '/+$', ''), '');
+$$;
+
 -- ===== submissions (projects) =====
 create table public.submissions (
   id           uuid primary key default gen_random_uuid(),
@@ -273,9 +289,9 @@ create table public.submissions (
 );
 create index on public.submissions (student_id, status);
 create index on public.submissions (status, submitted_at);
--- Uniqueness: a student cannot have two live (pending/approved) submissions with the same title or link.
-create unique index submissions_title_uq on public.submissions (student_id, lower(trim(title))) where status <> 'rejected';
-create unique index submissions_link_uq  on public.submissions (student_id, lower(trim(link)))  where status <> 'rejected' and link is not null;
+-- Uniqueness: a student cannot have two live (pending/approved) submissions with the same (normalised) title or link.
+create unique index submissions_title_uq on public.submissions (student_id, public._norm_title(title)) where status <> 'rejected';
+create unique index submissions_link_uq  on public.submissions (student_id, public._norm_link(link))  where status <> 'rejected' and link is not null;
 
 -- ===== daily reports =====
 create table public.daily_reports (
@@ -351,7 +367,7 @@ language sql stable security definer set search_path = public as $$
       (st.profile_completed_at is not null and exists (
          select 1 from public.batches b join public.classes c on c.id = b.class_id
          where b.id = st.batch_id and b.is_active and c.is_active)) as enrolled,
-      (select count(*)::int from public.submissions x where x.student_id = st.id and x.status = 'approved') as n
+      (select count(distinct public._norm_title(x.title))::int from public.submissions x where x.student_id = st.id and x.status = 'approved') as n
     from public.students st where st.id = p_student
   ), d as (
     select bd.*, coalesce(sum(bd.required_projects) over (order by bd.position
@@ -538,6 +554,11 @@ begin
   if sid is null then raise exception 'not a student account' using errcode = '42501'; end if;
   if v_name is null or v_name = '' then raise exception 'Name is required'; end if;
   if v_batch is null then raise exception 'Choose your batch'; end if;
+  if p ? 'image_url' and p->>'image_url' is not null and (
+       p->>'image_url' !~ '^https://res\.cloudinary\.com/[A-Za-z0-9_-]+/image/upload/'
+       or coalesce(p->>'image_public_id', '') not like 'student-journey/avatars/%' or (p->>'image_public_id') like '%..%') then
+    raise exception 'Invalid profile image';
+  end if;
   if not exists (select 1 from public.batches b join public.classes c on c.id = b.class_id
                  where b.id = v_batch and b.is_active and c.is_active) then
     raise exception 'That batch is not open for enrolment';
@@ -552,7 +573,10 @@ begin
   where id = sid;
 end $$;
 
-create or replace function public._check_attachments(a jsonb, min_n int) returns jsonb
+-- Evidence must be an image uploaded through our signed Cloudinary flow: the URL has to be a Cloudinary
+-- delivery URL and the public_id has to sit in the expected folder. This stops direct API calls from
+-- attaching arbitrary external URLs or another folder's assets.
+create or replace function public._check_attachments(a jsonb, min_n int, folder text) returns jsonb
 language plpgsql immutable as $$
 declare e jsonb;
 begin
@@ -560,7 +584,8 @@ begin
   if jsonb_array_length(a) < min_n then raise exception 'Attach at least % image(s) as evidence', min_n; end if;
   if jsonb_array_length(a) > 6 then raise exception 'At most 6 attachments'; end if;
   for e in select * from jsonb_array_elements(a) loop
-    if coalesce(e->>'url', '') !~ '^https://' or coalesce(e->>'public_id', '') = '' then
+    if coalesce(e->>'url', '') !~ '^https://res\.cloudinary\.com/[A-Za-z0-9_-]+/image/upload/'
+       or coalesce(e->>'public_id', '') not like folder || '/%' or (e->>'public_id') like '%..%' then
       raise exception 'Invalid attachment';
     end if;
   end loop;
@@ -585,7 +610,7 @@ begin
   values (sid, nullif(p->>'task_id', '')::uuid, left(trim(p->>'title'), 120), nullif(left(trim(coalesce(p->>'description', '')), 4000), ''),
           coalesce((p->>'type')::public.project_type, 'mini'),
           coalesce(array(select jsonb_array_elements_text(coalesce(p->'stack', '[]'::jsonb))), '{}'),
-          nullif(trim(coalesce(p->>'link', '')), ''), public._check_attachments(p->'attachments', 1))
+          nullif(trim(coalesce(p->>'link', '')), ''), public._check_attachments(p->'attachments', 1, 'student-journey/evidence'))
   returning id into v_id;
   return v_id;
 end $$;
@@ -598,7 +623,7 @@ begin
     title = left(trim(p->>'title'), 120), description = nullif(left(trim(coalesce(p->>'description', '')), 4000), ''),
     type = coalesce((p->>'type')::public.project_type, type),
     stack = coalesce(array(select jsonb_array_elements_text(coalesce(p->'stack', '[]'::jsonb))), '{}'),
-    link = nullif(trim(coalesce(p->>'link', '')), ''), attachments = public._check_attachments(p->'attachments', 1),
+    link = nullif(trim(coalesce(p->>'link', '')), ''), attachments = public._check_attachments(p->'attachments', 1, 'student-journey/evidence'),
     status = 'pending', reviewed_by = null, reviewed_at = null, resubmit_count = resubmit_count + 1, submitted_at = now()
   where id = p_id and student_id = sid and status = 'rejected';
   if not found then raise exception 'Only your rejected submissions can be resubmitted'; end if;
@@ -610,7 +635,7 @@ declare
   sid uuid := public._require_ready_student(); v_id uuid;
   v_date date := coalesce(nullif(p->>'report_date', '')::date, current_date);
   v_hours numeric := nullif(p->>'hours_spent', '')::numeric;
-  v_att jsonb := public._check_attachments(coalesce(p->'attachments', '[]'::jsonb), 0);
+  v_att jsonb := public._check_attachments(coalesce(p->'attachments', '[]'::jsonb), 0, 'student-journey/evidence');
 begin
   if v_date > current_date then raise exception 'Report date cannot be in the future'; end if;
   update public.daily_reports set
@@ -678,6 +703,9 @@ begin
       certificate_eligible = (r->>'certificate_eligible')::boolean, is_active = (r->>'is_active')::boolean
     where level = (r->>'level')::public.badge_level;
   end loop;
+  if not exists (select 1 from public.badge_definitions where is_active) then
+    raise exception 'At least one badge must stay active';
+  end if;
   for sid in select id from public.students where user_id is not null loop
     perform public._sync_student_progress(sid, false);
   end loop;
@@ -695,6 +723,10 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 -- ===== function privileges: internal helpers are not callable through the API =====
+revoke all on function public.current_student_id(), public.my_class_id(), public.my_batch_id(),
+  public._slugify(text), public._norm_title(text), public._norm_link(text), public._touch_review(),
+  public._check_attachments(jsonb, int, text) from public, anon;
+grant execute on function public.current_student_id(), public.my_class_id(), public.my_batch_id() to authenticated; -- used inside RLS policies
 revoke all on function public._student_progress(uuid), public._sync_student_progress(uuid, boolean),
   public._submissions_sync_trg(), public._require_ready_student(), public.handle_new_user() from public, anon, authenticated;
 revoke all on function public.update_my_profile(jsonb), public.submit_project(jsonb), public.resubmit_project(uuid, jsonb),
@@ -761,3 +793,20 @@ revoke all on public.submissions, public.daily_reports, public.student_badges, p
   public.tasks, public.lab_manuals from anon;
 revoke insert, update, delete on public.student_badges, public.certificates from authenticated;
 grant update (revoked_at, revoke_reason) on public.certificates to authenticated;
+
+-- ===== table privileges (defence in depth on top of RLS) =====
+-- Supabase grants broad rights to anon/authenticated by default and relies on RLS. RLS does not cover
+-- TRUNCATE, REFERENCES or TRIGGER, and anon never needs to write, so remove them on the new tables.
+revoke truncate, references, trigger on
+  public.organization_settings, public.classes, public.batches, public.tasks, public.lab_manuals,
+  public.badge_definitions, public.submissions, public.daily_reports, public.student_badges, public.certificates
+  from anon, authenticated;
+revoke insert, update, delete on
+  public.organization_settings, public.classes, public.batches, public.badge_definitions from anon;
+revoke all on public.public_student_projects from anon;
+grant select on public.public_student_projects to anon;
+
+-- The public board never needs the auth user id, batch or profile timestamps of a student.
+-- Anonymous visitors may read only the public columns (logged-in users are governed by RLS as before).
+revoke select on public.students from anon;
+grant select (id, slug, legacy_id, name, image_url, track, badge, skills, bio, created_at, updated_at) on public.students to anon;
