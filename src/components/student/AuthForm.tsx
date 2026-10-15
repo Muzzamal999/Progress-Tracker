@@ -7,16 +7,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 import { createClient } from "@/lib/supabase/client";
+import { siteUrl } from "@/lib/site-url";
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Email of a signed-up but unconfirmed account, so the confirmation mail can be resent.
+  const [unconfirmed, setUnconfirmed] = useState<string | null>(null);
+  const [resent, setResent] = useState(false);
+
+  async function resend() {
+    if (!unconfirmed) return;
+    setBusy(true);
+    setError(null);
+    const { error: err } = await createClient().auth.resend({ type: "signup", email: unconfirmed, options: { emailRedirectTo: `${siteUrl()}/login` } });
+    setBusy(false);
+    if (err) return setError(err.message);
+    setResent(true);
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setUnconfirmed(null);
+    setResent(false);
     const f = new FormData(e.currentTarget);
     const email = String(f.get("email") ?? "").trim();
     const password = String(f.get("password") ?? "");
@@ -35,7 +51,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         const { data, error: err } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { registration: "student", full_name: name }, emailRedirectTo: `${(process.env.NEXT_PUBLIC_SITE_URL || location.origin).replace(/\/$/, "")}/login` },
+          options: { data: { registration: "student", full_name: name }, emailRedirectTo: `${siteUrl()}/login` },
         });
         if (err) return setError(err.message.toLowerCase().includes("signups not allowed") ? "Registration is currently closed. Contact your administrator." : err.message);
         if (data.session) {
@@ -48,7 +64,10 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
         if (err || !data.user) {
           const msg = err?.message ?? "";
-          if (/not confirmed/i.test(msg)) return setError("Your email is not confirmed yet. Open the confirmation email we sent and click the link, then sign in.");
+          if (/not confirmed/i.test(msg)) {
+            setUnconfirmed(email);
+            return setError("Your email is not confirmed yet. Open the confirmation email we sent and click the link, then sign in.");
+          }
           if (/invalid login/i.test(msg) || !err) return setError("Invalid email or password");
           return setError(msg);
         }
@@ -92,7 +111,15 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         <Field id="confirm" label="Confirm password"><Input id="confirm" name="confirm" type="password" autoComplete="new-password" required /></Field>
       )}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {unconfirmed && (
+        resent
+          ? <p role="status" className="text-sm text-muted-foreground">Confirmation email sent to {unconfirmed}. Check your inbox (and spam).</p>
+          : <Button type="button" variant="outline" className="w-full" disabled={busy} onClick={resend}>Resend confirmation email</Button>
+      )}
       <Button type="submit" className="w-full" disabled={busy}>{busy ? "Please wait..." : mode === "register" ? "Create account" : "Sign in"}</Button>
+      {mode === "login" && (
+        <p className="text-center text-sm"><Link href="/forgot-password" className="font-medium text-primary hover:underline">Forgot password?</Link></p>
+      )}
       <p className="text-center text-sm text-muted-foreground">
         {mode === "register" ? (
           <>Already registered? <Link href="/login" className="font-medium text-primary hover:underline">Sign in</Link></>
