@@ -46,7 +46,12 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         }
       } else {
         const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
-        if (err || !data.user) return setError("Invalid email or password");
+        if (err || !data.user) {
+          const msg = err?.message ?? "";
+          if (/not confirmed/i.test(msg)) return setError("Your email is not confirmed yet. Open the confirmation email we sent and click the link, then sign in.");
+          if (/invalid login/i.test(msg) || !err) return setError("Invalid email or password");
+          return setError(msg);
+        }
         const { data: me } = await supabase.from("students").select("id").eq("user_id", data.user.id).maybeSingle();
         if (me) {
           router.replace("/dashboard");
