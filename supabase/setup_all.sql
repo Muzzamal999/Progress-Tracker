@@ -726,7 +726,7 @@ alter table public.student_badges   enable row level security;
 alter table public.certificates     enable row level security;
 
 -- Public board: legacy rows and completed self-registered profiles only (plus the owner and admins).
-drop policy "public read students" on public.students;
+drop policy if exists "public read students" on public.students;
 create policy "read visible students" on public.students for select
   using (user_id is null or profile_completed_at is not null or user_id = auth.uid() or public.is_admin());
 
