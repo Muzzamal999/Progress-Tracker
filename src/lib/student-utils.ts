@@ -99,15 +99,15 @@ export function availableTracks(students: Student[]): Track[] {
 
 /** Badge options that exist in the data, sorted by badge order. */
 export function availableBadges(students: Student[]): BadgeLevel[] {
-  const present = new Set(students.map((s) => s.badge));
+  const present = new Set(students.map((s) => s.badge).filter(Boolean));
   return BADGE_ORDER.filter((b) => present.has(b));
 }
 
 export const TRACK_COLORS: Record<Track, string> = {
-  Web: "text-blue-600",
-  Android: "text-green-600",
-  Backend: "text-purple-600",
-  Frontend: "text-pink-600",
+  Web: "text-blue-600 dark:text-blue-400",
+  Android: "text-green-600 dark:text-green-400",
+  Backend: "text-purple-600 dark:text-purple-400",
+  Frontend: "text-pink-600 dark:text-pink-400",
 };
 // // Text colours are the -600 shades (the -400 shades of the dark theme are too faint on white).
 // A new track added to the enum falls back to a neutral colour until it is mapped above.
@@ -115,7 +115,7 @@ export const trackColor = (t: string) =>
   (TRACK_COLORS as Record<string, string>)[t] ?? "text-muted-foreground";
 
 export const PROJECT_TYPE_CHIP: Record<string, string> = {
-  mini: "bg-green-500/20 text-green-700 border-green-500/30",
-  intermediate: "bg-yellow-500/20 text-yellow-700 border-yellow-500/30",
-  real: "bg-red-500/20 text-red-700 border-red-500/30",
+  mini: "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30",
+  intermediate: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30",
+  real: "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30",
 };

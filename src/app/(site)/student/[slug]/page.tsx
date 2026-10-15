@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: PageProps<"/student/[slug]">)
   try {
     const student = await getStudentBySlug(slug);
     if (!student) return { title: "Student not found" };
-    const description = `${student.name} – ${student.track} track, ${student.badge} badge on Student Journey Atlas.`;
+    const description = `${student.name} – ${student.track} track${student.badge ? `, ${student.badge} badge` : ""} on Student Journey Atlas.`;
     return { title: student.name, description, openGraph: { title: student.name, description } };
   } catch {
     return { title: "Student" };

@@ -29,7 +29,7 @@ export async function proxy(request: NextRequest) {
     }
     return NextResponse.next();
   }
-  if (!pathname.startsWith("/admin")) return NextResponse.next();
+  if (!pathname.startsWith("/admin") && !pathname.startsWith("/dashboard")) return NextResponse.next();
 
   // /admin/*: refresh the session and require a signed-in admin.
   let response = NextResponse.next({ request });
@@ -46,6 +46,10 @@ export async function proxy(request: NextRequest) {
 
   const { data } = await supabase.auth.getUser();
   const user = data.user;
+
+  // /dashboard/*: any signed-in user passes here; the page re-checks that a student profile exists.
+  if (pathname.startsWith("/dashboard")) return user ? response : redirectTo(request, "/login", response);
+
   const isLogin = pathname === "/admin/login";
 
   let isAdmin = false;
@@ -73,5 +77,5 @@ function redirectTo(request: NextRequest, path: string, from: NextResponse) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/student/:id"],
+  matcher: ["/admin/:path*", "/dashboard/:path*", "/student/:id"],
 };

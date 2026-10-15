@@ -1,7 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* Design tokens: dark theme by default (no theme toggle). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
  * Design tokens. Brand surfaces (header, hero, admin sidebar) are navy/midnight;
  * content surfaces are white and soft off-white. Change colours here only.
@@ -56,6 +57,32 @@
   --gradient-titanium: linear-gradient(135deg, #64748b 0%, #94a3b8 100%);
   --gradient-master: linear-gradient(135deg, #fb923c 0%, #fcd34d 100%);
   --gradient-legend: linear-gradient(135deg, #d946ef 0%, #8b5cf6 25%, #6366f1 50%, #a855f7 75%, #ec4899 100%);
+}
+
+/* Dark mode: toggled with the `dark` class on <html> (see ThemeToggle + the script in layout.tsx). */
+:root.dark {
+  --background: 228 40% 7%;
+  --foreground: 220 30% 95%;
+  --card: 227 36% 11%;
+  --card-foreground: 220 30% 95%;
+  --popover: 227 36% 11%;
+  --popover-foreground: 220 30% 95%;
+  --primary: 243 85% 68%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 227 28% 17%;
+  --secondary-foreground: 220 25% 90%;
+  --muted: 227 28% 15%;
+  --muted-foreground: 222 16% 68%;
+  --accent: 262 80% 68%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 68% 54%;
+  --border: 227 24% 21%;
+  --input: 227 24% 25%;
+  --ring: 243 85% 72%;
+  --shadow-card: 0 1px 2px hsl(0 0% 0% / 0.3), 0 4px 16px -4px hsl(0 0% 0% / 0.4);
+  --shadow-card-hover: 0 2px 4px hsl(0 0% 0% / 0.35), 0 16px 32px -12px hsl(243 85% 60% / 0.35);
+  --glow-primary: 0 0 0 4px hsl(243 85% 68% / 0.2);
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -140,3 +167,21 @@
   to { opacity: 1; transform: translateY(0); }
 }
 @utility animate-rise { animation: rise-in 0.5s ease-out both; }
+
+/* Badge progress glow: 0 = dim and locked, 1 = subtle, 2 = stronger, 3 = full + completion animation. */
+@keyframes badge-complete {
+  0% { transform: scale(0.85); }
+  55% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+@keyframes badge-pulse {
+  0%, 100% { filter: drop-shadow(0 0 14px var(--badge-glow, #fbbf24)); }
+  50% { filter: drop-shadow(0 0 24px var(--badge-glow, #fbbf24)); }
+}
+.badge-locked { opacity: 0.38; filter: grayscale(0.85); }
+.badge-glow-1 { filter: drop-shadow(0 0 5px var(--badge-glow, #fbbf24)); }
+.badge-glow-2 { filter: drop-shadow(0 0 12px var(--badge-glow, #fbbf24)); }
+.badge-glow-3 { animation: badge-complete 0.9s ease-out 1, badge-pulse 2.8s ease-in-out 0.9s infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .badge-glow-3 { animation: none; filter: drop-shadow(0 0 18px var(--badge-glow, #fbbf24)); }
+}

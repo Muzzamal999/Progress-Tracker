@@ -35,7 +35,8 @@ export interface Student {
   name: string;
   image_url: string | null;
   track: Track;
-  badge: BadgeLevel;
+  /** null until the student earns their first badge (registered students start with none). */
+  badge: BadgeLevel | null;
   skills: string[];
   created_at: string;
   projects: Project[];

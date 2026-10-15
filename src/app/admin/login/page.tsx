@@ -24,7 +24,7 @@ export default function LoginPage() {
             <li className="flex items-center gap-3"><ShieldCheck className="h-5 w-5 text-indigo-300" aria-hidden="true" /> Access limited to approved admins</li>
           </ul>
         </div>
-        <p className="relative text-sm text-navy-muted">Sign-ups are closed. Admin accounts are created by invitation only.</p>
+        <p className="relative text-sm text-navy-muted">Admin accounts are created by invitation only. Students sign in from the main site.</p>
       </aside>
 
       <main id="main" className="flex flex-col justify-center bg-background px-4 py-10 sm:px-10">

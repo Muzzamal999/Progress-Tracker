@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, ShieldCheck, X } from "lucide-react";
 import { SiteLogo } from "@/components/SiteLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -43,6 +44,19 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <Link
+            href="/login"
+            className="hidden items-center rounded-lg px-3.5 py-2 text-sm font-medium text-navy-foreground transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:inline-flex"
+          >
+            Student login
+          </Link>
+          <Link
+            href="/register"
+            className="hidden items-center rounded-lg bg-accent-gradient px-3.5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:inline-flex"
+          >
+            Register
+          </Link>
           <Link
             href="/admin"
             className="hidden items-center gap-1.5 rounded-lg border border-navy-border px-3.5 py-2 text-sm font-medium text-navy-foreground transition-colors hover:border-white/30 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:inline-flex"
@@ -64,7 +78,7 @@ export function SiteHeader() {
       {open && (
         <nav id="mobile-nav" aria-label="Mobile" className="animate-rise border-t border-navy-border bg-midnight px-4 pb-4 pt-2 md:hidden">
           <ul className="space-y-1">
-            {[...LINKS, { href: "/admin", label: "Admin" }].map((l) => (
+            {[...LINKS, { href: "/login", label: "Student login" }, { href: "/register", label: "Register" }, { href: "/admin", label: "Admin" }].map((l) => (
               <li key={l.href}>
                 <Link
                   href={l.href}

@@ -3,21 +3,21 @@ import { badgeRank } from "@/lib/badges";
 import { cn } from "@/lib/utils";
 
 /** 10-step bar showing how far up the badge ladder a student is (derived from their real badge). */
-export function LevelProgress({ level, compact = false, className }: { level: BadgeLevel; compact?: boolean; className?: string }) {
-  const rank = badgeRank(level) + 1;
+export function LevelProgress({ level, compact = false, className }: { level: BadgeLevel | null; compact?: boolean; className?: string }) {
+  const rank = badgeRank(level) + 1; // 0 when no badge has been earned yet
   return (
     <div className={className}>
       {!compact && (
         <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground">
           <span>Level progress</span>
           <span>
-            Level {rank} of {BADGE_ORDER.length}
+            {rank ? `Level ${rank} of ${BADGE_ORDER.length}` : "Not started"}
           </span>
         </div>
       )}
       <div
         role="progressbar"
-        aria-label={`${level} badge, level ${rank} of ${BADGE_ORDER.length}`}
+        aria-label={level ? `${level} badge, level ${rank} of ${BADGE_ORDER.length}` : "No badge earned yet"}
         aria-valuemin={0}
         aria-valuemax={BADGE_ORDER.length}
         aria-valuenow={rank}
