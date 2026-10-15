@@ -3,14 +3,21 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ExternalLink, LayoutDashboard, Menu, UserPlus, X } from "lucide-react";
+import { Award, BookOpen, ClipboardCheck, ExternalLink, GraduationCap, LayoutDashboard, Menu, Palette, ScrollText, UserPlus, X } from "lucide-react";
 import { LogoutButton } from "@/components/admin/LogoutButton";
 import { LogoMark } from "@/components/SiteLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/admin", label: "Students", icon: LayoutDashboard, match: (p: string) => p === "/admin" || /^\/admin\/students\/[^/]+\/edit/.test(p) },
   { href: "/admin/students/new", label: "Add student", icon: UserPlus, match: (p: string) => p === "/admin/students/new" },
+  { href: "/admin/review", label: "Review queue", icon: ClipboardCheck, match: (p: string) => p.startsWith("/admin/review") },
+  { href: "/admin/academics", label: "Classes & tasks", icon: GraduationCap, match: (p: string) => p.startsWith("/admin/academics") },
+  { href: "/admin/manuals", label: "Lab manuals", icon: BookOpen, match: (p: string) => p.startsWith("/admin/manuals") },
+  { href: "/admin/badges", label: "Badge rules", icon: Award, match: (p: string) => p.startsWith("/admin/badges") },
+  { href: "/admin/certificates", label: "Certificates", icon: ScrollText, match: (p: string) => p.startsWith("/admin/certificates") },
+  { href: "/admin/settings", label: "Branding", icon: Palette, match: (p: string) => p.startsWith("/admin/settings") },
 ];
 
 export function AdminSidebar({ email }: { email: string | null }) {
@@ -50,6 +57,7 @@ export function AdminSidebar({ email }: { email: string | null }) {
         </Link>
       </nav>
       <div className="space-y-3 border-t border-navy-border p-4">
+        <ThemeToggle className="w-full justify-start gap-3 px-3 text-sm" />
         {email && (
           <p className="truncate text-xs text-navy-muted" title={email}>
             Signed in as <span className="text-white">{email}</span>

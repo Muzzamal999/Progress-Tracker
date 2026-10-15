@@ -40,7 +40,10 @@ export function HomeClient({ students }: { students: Student[] }) {
   // Real figures only, computed from the data.
   const projectTotal = useMemo(() => students.reduce((n, s) => n + s.projects.length, 0), [students]);
   const featured = useMemo(
-    () => [...students].sort((a, b) => badgeRank(b.badge) - badgeRank(a.badge) || a.name.localeCompare(b.name))[0] ?? null,
+    () => {
+      const top = [...students].sort((a, b) => badgeRank(b.badge) - badgeRank(a.badge) || a.name.localeCompare(b.name))[0];
+      return top?.badge ? top : null; // nobody has earned a badge yet: show the plain ladder
+    },
     [students],
   );
 

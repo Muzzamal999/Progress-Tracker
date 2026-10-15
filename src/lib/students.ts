@@ -38,7 +38,26 @@ export async function getStudents(): Promise<Student[]> {
       .order("name")
       .order("position", { referencedTable: "projects" }),
   );
-  return (data ?? []) as unknown as Student[];
+  const students = (data ?? []) as unknown as Student[];
+
+  // Approved submissions of registered students are public projects too. Failure here (e.g. the
+  // migration has not been applied yet) must not take the whole board down.
+  try {
+    const { data: approved } = await supabase
+      .from("public_student_projects")
+      .select("id, student_id, title, type, solo, stack, link, submitted_at")
+      .order("submitted_at");
+    const byStudent = new Map<string, Student["projects"]>();
+    for (const p of (approved ?? []) as { id: string; student_id: string; title: string; type: Student["projects"][number]["type"]; solo: boolean; stack: string[]; link: string | null }[]) {
+      const list = byStudent.get(p.student_id) ?? [];
+      list.push({ id: p.id, title: p.title, type: p.type, solo: p.solo, stack: p.stack, link: p.link, position: 1000 + list.length });
+      byStudent.set(p.student_id, list);
+    }
+    for (const s of students) s.projects = [...(s.projects ?? []), ...(byStudent.get(s.id) ?? [])];
+  } catch (e) {
+    console.error("Could not load approved submissions", e);
+  }
+  return students;
 }
 
 export async function getStudentBySlug(slug: string): Promise<Student | null> {

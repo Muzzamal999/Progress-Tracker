@@ -1,7 +1,16 @@
 import "server-only";
 import { v2 as cloudinary } from "cloudinary";
 
-export const CLOUDINARY_FOLDER = "student-journey/avatars";
+export const UPLOAD_PURPOSES = ["avatar", "evidence", "manual", "branding"] as const;
+export type UploadPurpose = (typeof UPLOAD_PURPOSES)[number];
+const FOLDERS: Record<UploadPurpose, string> = {
+  avatar: "student-journey/avatars",
+  evidence: "student-journey/evidence",
+  manual: "student-journey/manuals",
+  branding: "student-journey/branding",
+};
+export const CLOUDINARY_ROOT = "student-journey/";
+export const CLOUDINARY_FOLDER = FOLDERS.avatar;
 export const ALLOWED_FORMATS = "jpg,png,webp";
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -15,29 +24,30 @@ function config() {
 }
 
 /** Builds signed upload params. Only these exact params can be used by the browser. */
-export function signUpload() {
+export function signUpload(purpose: UploadPurpose = "avatar") {
+  const folder = FOLDERS[purpose];
   const { cloudName, apiKey, apiSecret } = config();
   const timestamp = Math.round(Date.now() / 1000);
   const signature = cloudinary.utils.api_sign_request(
-    { timestamp, folder: CLOUDINARY_FOLDER, allowed_formats: ALLOWED_FORMATS },
+    { timestamp, folder, allowed_formats: ALLOWED_FORMATS },
     apiSecret,
   );
-  return { timestamp, signature, apiKey, cloudName, folder: CLOUDINARY_FOLDER, allowedFormats: ALLOWED_FORMATS };
+  return { timestamp, signature, apiKey, cloudName, folder, allowedFormats: ALLOWED_FORMATS };
 }
 
 /** Only accept ids/URLs that came from our own folder and cloud. Deletion is by public_id only. */
-export function isOwnAsset(publicId: string, url: string): boolean {
+export function isOwnAsset(publicId: string, url: string, purpose: UploadPurpose = "avatar"): boolean {
   const cloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   return (
     !!cloud &&
-    publicId.startsWith(`${CLOUDINARY_FOLDER}/`) &&
+    publicId.startsWith(`${FOLDERS[purpose]}/`) &&
     !publicId.includes("..") &&
     url.startsWith(`https://res.cloudinary.com/${cloud}/image/upload/`)
   );
 }
 
 export async function destroyImage(publicId: string | null | undefined): Promise<void> {
-  if (!publicId || !publicId.startsWith(`${CLOUDINARY_FOLDER}/`)) return;
+  if (!publicId || !publicId.startsWith(CLOUDINARY_ROOT) || publicId.includes("..")) return;
   config();
   try {
     await cloudinary.uploader.destroy(publicId, { invalidate: true });

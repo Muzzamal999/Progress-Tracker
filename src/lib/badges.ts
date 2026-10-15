@@ -1,6 +1,6 @@
 import { BADGE_ORDER, type BadgeLevel } from "./types";
 
-export const badgeRank = (b: BadgeLevel) => BADGE_ORDER.indexOf(b);
+export const badgeRank = (b: BadgeLevel | null) => (b ? BADGE_ORDER.indexOf(b) : -1);
 
 /** Short descriptions used by the legend sidebar. */
 export const LEGEND_DESCRIPTIONS: Record<BadgeLevel, string> = {

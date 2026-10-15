@@ -21,7 +21,14 @@ const SIZES = {
   lg: { box: "px-4 py-1.5 text-base gap-2", icon: "h-5 w-5" },
 };
 
-export function Badge({ level, size = "md", className }: { level: BadgeLevel; size?: keyof typeof SIZES; className?: string }) {
+export function Badge({ level, size = "md", className }: { level: BadgeLevel | null; size?: keyof typeof SIZES; className?: string }) {
+  if (!level) {
+    return (
+      <span className={cn("inline-flex items-center whitespace-nowrap rounded-full bg-secondary font-semibold tracking-tight text-muted-foreground ring-1 ring-border", SIZES[size].box, className)}>
+        No badge yet
+      </span>
+    );
+  }
   // Unknown values (e.g. a level added to the DB but not here) fall back to Bronze instead of crashing.
   const cfg = BADGE_CONFIG[level] ?? BADGE_CONFIG[BADGE_ORDER[0]];
   const Icon = cfg.icon;
