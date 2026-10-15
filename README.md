@@ -52,6 +52,13 @@ Package manager: **npm** (`package-lock.json` is the only lockfile).
 2. Add the environment variables for Production, Preview and Development.
 3. Deploy, then put the production URL into Supabase (step 1.6).
 
+## Applying migration 0003 safely
+- Apply `supabase/migrations/0003_student_progress.sql` **once**, as a single transaction, from the repo file itself. Do not copy SQL out of chat or email; use the file or the GitHub "Copy raw file" button and confirm it has 653 lines.
+- Preferred (exact error messages, automatic rollback): `psql "<connection string from Supabase → Connect>" -v ON_ERROR_STOP=1 -1 -f supabase/migrations/0003_student_progress.sql`.
+- In the SQL Editor: wrap the file in `begin;` / `commit;`, select all, accept the "destructive query" warning (the file contains `drop policy` and `delete` inside functions) and check the result panel.
+- Before: run `supabase/checks/pre_0003_readonly.sql`. After: run `supabase/checks/post_0003_readonly.sql`. Both are read-only and return one JSON row.
+- Do **not** run `supabase/setup_all.sql` on an existing database (it recreates the base tables).
+
 ## Adding an admin
 Admins are never created through the public sign-up form. In the Supabase dashboard:
 1. **Authentication → Users → Add user**: enter the admin's email and a strong password you choose (auto-confirm). Do not reuse or share it; no credentials are stored in this repository.
