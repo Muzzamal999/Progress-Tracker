@@ -3,7 +3,7 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { destroyImage, isOwnAsset, verifyUploadedImage } from "@/lib/cloudinary-server";
+import { destroyImage, isOwnAsset, isOwnPdf, verifyUploadedImage, verifyUploadedPdf } from "@/lib/cloudinary-server";
 import { getStudentSession } from "@/lib/student-session";
 import { STUDENTS_TAG } from "@/lib/students";
 import { PROJECT_TYPES, TRACKS } from "@/lib/types";
@@ -90,6 +90,7 @@ const projectSchema = z.object({
   link: optionalUrl,
   taskId: z.uuid().nullable().optional(),
   attachments: evidenceList(1),
+  labReport: z.object({ url: z.url(), publicId: z.string().min(1).max(300), name: z.string().trim().min(1).max(200) }, "Attach your lab report as a PDF"),
 });
 
 export async function submitProjectAction(raw: unknown): Promise<ActionResult> {
@@ -98,6 +99,12 @@ export async function submitProjectAction(raw: unknown): Promise<ActionResult> {
   const v = parsed.data;
   const bad = await verifyAssets(v.attachments, "evidence");
   if (bad) return { ok: false, error: bad };
+  if (!isOwnPdf(v.labReport.publicId, v.labReport.url, "labreport")) return { ok: false, error: "Invalid lab report" };
+  const pdf = await verifyUploadedPdf(v.labReport.publicId);
+  if (!pdf.ok) {
+    await dropAssets(v.attachments);
+    return { ok: false, error: pdf.error };
+  }
 
   const supabase = await createClient();
   const payload = {
@@ -108,12 +115,13 @@ export async function submitProjectAction(raw: unknown): Promise<ActionResult> {
     link: v.link,
     task_id: v.taskId ?? null,
     attachments: v.attachments.map((a) => ({ url: a.url, public_id: a.publicId })),
+    lab_report: { url: v.labReport.url, public_id: v.labReport.publicId, name: v.labReport.name, pages: pdf.pages, bytes: pdf.bytes },
   };
   const { error } = v.id
     ? await supabase.rpc("resubmit_project", { p_id: v.id, p: payload })
     : await supabase.rpc("submit_project", { p: payload });
   if (error) {
-    await dropAssets(v.attachments);
+    await dropAssets([...v.attachments, v.labReport]);
     return { ok: false, error: userError(error) };
   }
   return { ok: true };

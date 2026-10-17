@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { reviewAction } from "@/app/actions/admin-workflow";
-import type { Attachment, ReviewStatus } from "@/lib/workflow-types";
+import { PdfViewer } from "@/components/PdfViewer";
+import type { Attachment, PdfDoc, ReviewStatus } from "@/lib/workflow-types";
 
 export interface ReviewItem {
   kind: "submission" | "report";
@@ -19,6 +20,7 @@ export interface ReviewItem {
   body: string | null;
   link: string | null;
   attachments: Attachment[];
+  labReport?: PdfDoc | null;
   status: ReviewStatus;
   feedback: string | null;
 }
@@ -67,6 +69,7 @@ export function ReviewCard({ item }: { item: ReviewItem }) {
           ))}
         </div>
       )}
+      {item.labReport && <div className="mt-3"><PdfViewer pdf={item.labReport} label="Lab report (PDF)" /></div>}
       {item.feedback && <p className="mt-3 rounded-lg bg-secondary p-2 text-sm"><span className="font-medium">Feedback:</span> {item.feedback}</p>}
 
       {rejecting && (

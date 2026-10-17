@@ -26,7 +26,7 @@ export default async function ReviewPage({ searchParams }: { searchParams: Promi
     items = ((data ?? []) as (SubmissionRow & { students: { name: string } | null })[]).map((s) => ({
       kind: "submission", id: s.id, studentName: s.students?.name ?? "Unknown", title: s.title,
       meta: `${s.type} project · ${new Date(s.submitted_at).toLocaleDateString("en-GB")}${s.resubmit_count ? " · resubmitted" : ""}`,
-      body: s.description, link: s.link, attachments: s.attachments, status: s.status, feedback: s.feedback,
+      body: s.description, link: s.link, attachments: s.attachments, labReport: s.lab_report, status: s.status, feedback: s.feedback,
     }));
   } else {
     const { data } = await supabase.from("daily_reports").select("*, students(name)").eq("status", status).order("report_date", { ascending: false }).limit(50);

@@ -4,6 +4,8 @@ import { requireStudentPage } from "@/lib/student-session";
 import { ProjectForm } from "@/components/student/ProjectForm";
 import { ResubmitButton } from "@/components/student/ResubmitButton";
 import { Button } from "@/components/ui/button";
+import { Lock } from "lucide-react";
+import { PdfViewer } from "@/components/PdfViewer";
 import { EmptyState, StatusPill } from "@/components/ui/field";
 import type { SubmissionRow } from "@/lib/workflow-types";
 
@@ -25,12 +27,13 @@ export default async function ProjectsPage() {
     supabase.from("tasks").select("id, title").eq("is_active", true).order("created_at"),
   ]);
   const subs = (data ?? []) as SubmissionRow[];
-  const taskList = tasks ?? [];
+  const lockedTasks = new Set(subs.filter((s) => s.status !== "rejected" && s.task_id).map((s) => s.task_id));
+  const taskList = (tasks ?? []).filter((t) => !lockedTasks.has(t.id));
   return (
     <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr]">
       <section aria-labelledby="new-h">
         <h2 id="new-h" className="text-xl font-bold">Submit a project</h2>
-        <p className="mb-5 mt-1 text-sm text-muted-foreground">Only projects approved by an admin count towards your badges. Pending and rejected work does not.</p>
+        <p className="mb-5 mt-1 text-sm text-muted-foreground">Submissions are locked once sent: you cannot edit them unless an admin rejects them. Only projects approved by an admin count towards your badges. Pending and rejected work does not.</p>
         <ProjectForm tasks={taskList} />
       </section>
       <section aria-labelledby="mine-h">
@@ -46,7 +49,8 @@ export default async function ProjectsPage() {
                   <p className="text-xs text-muted-foreground">Submitted {new Date(s.submitted_at).toLocaleDateString("en-GB")}{s.resubmit_count ? ` · resubmitted ${s.resubmit_count}×` : ""}</p>
                   {s.feedback && <p className="mt-2 rounded-lg bg-secondary p-2 text-sm"><span className="font-medium">Admin feedback:</span> {s.feedback}</p>}
                 </div>
-                <StatusPill status={s.status} />
+                <div className="flex items-center gap-2">{s.status !== "rejected" && <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="Locked" />}<StatusPill status={s.status} /></div>
+                {s.lab_report && <div className="w-full"><PdfViewer pdf={s.lab_report} label="My lab report" /></div>}
                 {s.status === "rejected" && (
                   <ResubmitButton
                     tasks={taskList}

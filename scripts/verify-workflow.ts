@@ -53,7 +53,8 @@ async function newUser(email: string, password: string, meta?: Record<string, st
 }
 
 const evidence = [{ url: "https://res.cloudinary.com/test/image/upload/test.png", public_id: "student-journey/evidence/test" }];
-const proj = (title: string, extra: Record<string, unknown> = {}) => ({ title, type: "mini", stack: ["react"], attachments: evidence, ...extra });
+const labReport = { url: "https://res.cloudinary.com/test/image/upload/test.pdf", public_id: "student-journey/lab-reports/test", name: "report.pdf", pages: 2, bytes: 1000 };
+const proj = (title: string, extra: Record<string, unknown> = {}) => ({ title, type: "mini", stack: ["react"], attachments: evidence, lab_report: labReport, ...extra });
 
 async function progress(c: SupabaseClient) {
   const { data, error } = await c.rpc("my_progress");

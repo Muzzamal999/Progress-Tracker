@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 import { NativeSelect, Textarea } from "@/components/ui/textarea";
 import { ImageUploader, type UploadedAsset } from "@/components/ImageUploader";
+import { PdfUploader, type UploadedPdf } from "@/components/PdfUploader";
 import { submitProjectAction } from "@/app/actions/student";
 import { splitCommaList } from "@/lib/student-utils";
 import { PROJECT_TYPES, type ProjectType } from "@/lib/types";
@@ -27,6 +28,7 @@ export function ProjectForm({ tasks, draft, onDone }: { tasks: { id: string; tit
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<UploadedAsset[]>([]);
+  const [labReport, setLabReport] = useState<UploadedPdf | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -43,11 +45,13 @@ export function ProjectForm({ tasks, draft, onDone }: { tasks: { id: string; tit
       link: String(f.get("link") ?? ""),
       taskId: f.get("task") ? String(f.get("task")) : null,
       attachments: files,
+      labReport,
     });
     setBusy(false);
     if (!res.ok) return setError(res.error);
     toast.success(draft?.id ? "Project resubmitted for review" : "Project submitted for review");
     setFiles([]);
+    setLabReport(null);
     form.reset();
     router.refresh();
     onDone?.();
@@ -75,6 +79,10 @@ export function ProjectForm({ tasks, draft, onDone }: { tasks: { id: string; tit
       <div className="space-y-2">
         <p className="text-sm font-medium">Evidence (required)</p>
         <ImageUploader purpose="evidence" value={files} onChange={setFiles} label="Add screenshots" />
+      </div>
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Lab report (required)</p>
+        <PdfUploader purpose="labreport" value={labReport} onChange={setLabReport} label="Attach lab report (PDF)" />
       </div>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <Button type="submit" disabled={busy}>{busy ? "Submitting..." : draft?.id ? "Resubmit for review" : "Submit for review"}</Button>

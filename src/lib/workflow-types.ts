@@ -6,6 +6,15 @@ export interface Attachment {
   public_id: string;
 }
 
+/** A PDF uploaded through Cloudinary (stored with its page count so the viewer can render every page). */
+export interface PdfDoc {
+  url: string;
+  public_id: string;
+  name: string;
+  pages: number;
+  bytes: number;
+}
+
 export interface BadgeProgress {
   badge_id: string;
   level: BadgeLevel;
@@ -29,6 +38,7 @@ export interface SubmissionRow {
   stack: string[];
   link: string | null;
   attachments: Attachment[];
+  lab_report: PdfDoc | null;
   status: ReviewStatus;
   feedback: string | null;
   reviewed_at: string | null;
@@ -80,6 +90,7 @@ export interface ManualRow {
   description: string | null;
   body: string | null;
   images: Attachment[];
+  pdf: PdfDoc | null;
   created_at: string;
 }
 export interface BadgeRule {

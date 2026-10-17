@@ -4,7 +4,7 @@ import { updateTag } from "next/cache";
 import { z } from "zod";
 import { requireAdmin, NotAdminError } from "@/lib/admin";
 import { createClient } from "@/lib/supabase/server";
-import { destroyImage, isOwnAsset, verifyUploadedImage } from "@/lib/cloudinary-server";
+import { destroyImage, isOwnAsset, isOwnPdf, verifyUploadedImage, verifyUploadedPdf } from "@/lib/cloudinary-server";
 import { STUDENTS_TAG } from "@/lib/students";
 import { BADGE_ORDER } from "@/lib/types";
 import type { ActionResult } from "./students";
@@ -99,8 +99,8 @@ export async function deleteRowAction(table: "classes" | "batches" | "tasks" | "
   return guarded(async (sb) => {
     let images: { public_id: string }[] = [];
     if (table === "lab_manuals") {
-      const { data } = await sb.from("lab_manuals").select("images").eq("id", id).maybeSingle();
-      images = (data?.images as { public_id: string }[]) ?? [];
+      const { data } = await sb.from("lab_manuals").select("images, pdf").eq("id", id).maybeSingle();
+      images = [...((data?.images as { public_id: string }[]) ?? []), ...(data?.pdf ? [data.pdf as { public_id: string }] : [])];
     }
     const { error } = await sb.from(table).delete().eq("id", id);
     if (error) return fail(error);
@@ -115,6 +115,7 @@ const manualSchema = z.object({
   classId: z.uuid("Choose a class"), batchId: z.uuid().nullable().optional(),
   title: z.string().trim().min(1, "Title is required").max(200), description: text(1000), body: text(20000),
   images: z.array(asset).max(10),
+  pdf: z.object({ url: z.url(), publicId: z.string().min(1).max(300), name: z.string().trim().min(1).max(200) }).nullable().optional(),
 });
 export async function createManualAction(raw: unknown): Promise<ActionResult> {
   const p = manualSchema.safeParse(raw);
@@ -125,14 +126,21 @@ export async function createManualAction(raw: unknown): Promise<ActionResult> {
     const c = await verifyUploadedImage(i.publicId);
     if (!c.ok) return { ok: false, error: c.error };
   }
+  let pdf: { url: string; public_id: string; name: string; pages: number; bytes: number } | null = null;
+  if (v.pdf) {
+    if (!isOwnPdf(v.pdf.publicId, v.pdf.url, "manualpdf")) return { ok: false, error: "Invalid PDF" };
+    const c = await verifyUploadedPdf(v.pdf.publicId);
+    if (!c.ok) return { ok: false, error: c.error };
+    pdf = { url: v.pdf.url, public_id: v.pdf.publicId, name: v.pdf.name, pages: c.pages, bytes: c.bytes };
+  }
   const res = await guarded(async (sb) => {
     const { error } = await sb.from("lab_manuals").insert({
       class_id: v.classId, batch_id: v.batchId ?? null, title: v.title, description: orNull(v.description), body: orNull(v.body),
-      images: v.images.map((i) => ({ url: i.url, public_id: i.publicId })),
+      images: v.images.map((i) => ({ url: i.url, public_id: i.publicId })), pdf,
     });
     return error ? fail(error) : { ok: true };
   });
-  if (!res.ok) await Promise.all(v.images.map((i) => destroyImage(i.publicId)));
+  if (!res.ok) await Promise.all([...v.images.map((i) => destroyImage(i.publicId)), destroyImage(v.pdf?.publicId)]);
   return res;
 }
 
