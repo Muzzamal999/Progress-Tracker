@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FileText, Loader2, Upload, X } from "lucide-react";
+import { ExternalLink, FileText, Loader2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface UploadedPdf {
@@ -82,7 +82,14 @@ export function PdfUploader({
             <p className="truncate text-sm font-semibold">{value.name}</p>
             <p className="text-xs text-muted-foreground">PDF · {value.pages} {value.pages === 1 ? "page" : "pages"} · {formatSize(value.bytes)}</p>
           </div>
-          <button type="button" aria-label="Remove PDF" disabled={disabled} onClick={() => onChange(null)} className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive hover:text-destructive-foreground">
+          <a href={value.url} target="_blank" rel="noopener noreferrer" aria-label="Open PDF to check it's the right file" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground">
+            <ExternalLink className="h-4 w-4" />
+          </a>
+          <input ref={input} type="file" accept="application/pdf,.pdf" className="sr-only" id={`up-${purpose}-replace`} onChange={(e) => onFile(e.target.files)} disabled={busy || disabled} />
+          <Button type="button" size="sm" variant="outline" disabled={busy || disabled} onClick={() => input.current?.click()}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Replace"}
+          </Button>
+          <button type="button" aria-label="Remove PDF" disabled={busy || disabled} onClick={() => onChange(null)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive hover:text-destructive-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
