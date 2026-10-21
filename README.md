@@ -52,6 +52,9 @@ Package manager: **npm** (`package-lock.json` is the only lockfile).
 2. Add the environment variables for Production, Preview and Development.
 3. Deploy, then put the production URL into Supabase (step 1.6).
 
+## Deadlines, daily-report PDFs, project review, password recovery
+See [`supabase/DEADLINES_REPORTS_RECOVERY.md`](supabase/DEADLINES_REPORTS_RECOVERY.md) for behaviour, the **ordered production rollout (apply migration `0006` before deploying)**, Supabase email-template / redirect-URL settings and the test commands.
+
 ## Applying migration 0003 safely
 - Apply `supabase/migrations/0003_student_progress.sql` **once**, as a single transaction, from the repo file itself. Do not copy SQL out of chat or email; use the file or the GitHub "Copy raw file" button and confirm it has 653 lines.
 - Preferred (exact error messages, automatic rollback): `psql "<connection string from Supabase → Connect>" -v ON_ERROR_STOP=1 -1 -f supabase/migrations/0003_student_progress.sql`.

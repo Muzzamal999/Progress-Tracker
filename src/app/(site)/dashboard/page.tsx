@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Download, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireStudentPage } from "@/lib/student-session";
+import { getMyWindows } from "@/lib/my-deadlines";
+import { WindowsSummary } from "@/components/student/SubmissionWindow";
 import { BadgeMedal } from "@/components/BadgeMedal";
 import { Button } from "@/components/ui/button";
 import { EmptyState, StatusPill } from "@/components/ui/field";
@@ -10,12 +12,15 @@ import type { BadgeProgress, CertificateRow, SubmissionRow } from "@/lib/workflo
 export default async function DashboardPage() {
   const { student } = await requireStudentPage();
   const supabase = await createClient();
-  const [progressRes, subsRes, certsRes, reportsRes] = await Promise.all([
+  const [progressRes, subsRes, certsRes, reportsRes, windows, tasksRes] = await Promise.all([
     supabase.rpc("my_progress"),
     supabase.from("submissions").select("id, title, status, feedback, submitted_at").order("submitted_at", { ascending: false }),
     supabase.from("certificates").select("*").is("revoked_at", null).order("issued_at", { ascending: false }),
     supabase.from("daily_reports").select("id", { count: "exact", head: true }),
+    getMyWindows(),
+    supabase.from("tasks").select("id, title").eq("is_active", true),
   ]);
+  const taskTitles = Object.fromEntries((tasksRes.data ?? []).map((t) => [t.id, t.title]));
   const progress = (progressRes.data ?? []) as BadgeProgress[];
   const subs = (subsRes.data ?? []) as Pick<SubmissionRow, "id" | "title" | "status" | "feedback" | "submitted_at">[];
   const certs = (certsRes.data ?? []) as CertificateRow[];
@@ -34,6 +39,8 @@ export default async function DashboardPage() {
           <Button asChild><Link href="/dashboard/profile">Complete profile</Link></Button>
         </div>
       )}
+
+      {profileDone && <WindowsSummary windows={windows} taskTitles={taskTitles} />}
 
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         {[

@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:unit": "node --import tsx --test tests/unit/*.test.ts",
+    "test:db": "psql \"$TEST_DB_URL\" -v ON_ERROR_STOP=1 -f supabase/tests/0006_deadlines.test.sql",
+    "test": "npm run test:unit"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

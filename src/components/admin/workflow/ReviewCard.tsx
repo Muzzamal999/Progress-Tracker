@@ -1,20 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { Check, ExternalLink, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 import { StatusPill } from "@/components/ui/field";
-import { Textarea } from "@/components/ui/textarea";
-import { reviewAction } from "@/app/actions/admin-workflow";
 import { PdfViewer } from "@/components/PdfViewer";
+import { ReviewActions } from "@/components/admin/workflow/ReviewActions";
 import type { Attachment, PdfDoc, ReviewStatus } from "@/lib/workflow-types";
 
 export interface ReviewItem {
   kind: "submission" | "report";
   id: string;
   studentName: string;
+  studentId?: string;
   title: string;
   meta: string;
   body: string | null;
@@ -26,30 +23,17 @@ export interface ReviewItem {
 }
 
 export function ReviewCard({ item }: { item: ReviewItem }) {
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [rejecting, setRejecting] = useState(false);
-  const [feedback, setFeedback] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  async function decide(decision: "approved" | "rejected") {
-    setBusy(true);
-    setError(null);
-    const res = await reviewAction({ kind: item.kind, id: item.id, decision, feedback });
-    setBusy(false);
-    if (!res.ok) return setError(res.error);
-    toast.success(decision === "approved" ? "Approved" : "Rejected with feedback");
-    setRejecting(false);
-    setFeedback("");
-    router.refresh();
-  }
-
+  const file = (which: string | number, download = false) => `/api/submissions/${item.id}/file?which=${which}${download ? "&download=1" : ""}`;
   return (
     <li className="rounded-2xl border border-border bg-card p-5 shadow-(--shadow-card)">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{item.studentName} · {item.meta}</p>
-          <h3 className="mt-0.5 text-lg font-bold">{item.title}</h3>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {item.studentId ? <Link href={`/admin/students/${item.studentId}`} className="hover:underline">{item.studentName}</Link> : item.studentName} · {item.meta}
+          </p>
+          <h3 className="mt-0.5 text-lg font-bold">
+            {item.kind === "submission" ? <Link href={`/admin/projects/${item.id}`} className="hover:underline">{item.title}</Link> : item.title}
+          </h3>
         </div>
         <StatusPill status={item.status} />
       </div>
@@ -61,34 +45,17 @@ export function ReviewCard({ item }: { item: ReviewItem }) {
       )}
       {item.attachments.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
-          {item.attachments.map((a) => (
-            <a key={a.public_id} href={a.url} target="_blank" rel="noopener noreferrer" aria-label="Open evidence image">
+          {item.attachments.map((a, i) => (
+            <a key={a.public_id} href={item.kind === "submission" ? file(i) : a.url} target="_blank" rel="noopener noreferrer" aria-label={`Open evidence image ${i + 1}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={a.url} alt="Evidence" className="h-24 w-32 rounded-lg border border-border object-cover" />
+              <img src={item.kind === "submission" ? file(i) : a.url} alt={`Evidence ${i + 1}`} className="h-24 w-32 rounded-lg border border-border object-cover" />
             </a>
           ))}
         </div>
       )}
-      {item.labReport && <div className="mt-3"><PdfViewer pdf={item.labReport} label="Lab report (PDF)" /></div>}
+      {item.labReport && <div className="mt-3"><PdfViewer pdf={item.labReport} label="Lab report (PDF)" openHref={file("lab")} downloadHref={file("lab", true)} /></div>}
       {item.feedback && <p className="mt-3 rounded-lg bg-secondary p-2 text-sm"><span className="font-medium">Feedback:</span> {item.feedback}</p>}
-
-      {rejecting && (
-        <div className="mt-4 space-y-2">
-          <label htmlFor={`fb-${item.id}`} className="text-sm font-medium">Feedback for the student (required)</label>
-          <Textarea id={`fb-${item.id}`} value={feedback} onChange={(e) => setFeedback(e.target.value)} maxLength={2000} autoFocus />
-        </div>
-      )}
-      {error && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
-      <div className="mt-4 flex flex-wrap gap-2">
-        {item.status !== "approved" && <Button size="sm" disabled={busy} onClick={() => decide("approved")}><Check /> Approve</Button>}
-        {item.status !== "rejected" && !rejecting && <Button size="sm" variant="outline" disabled={busy} onClick={() => setRejecting(true)}><X /> {item.status === "approved" ? "Withdraw approval" : "Reject"}</Button>}
-        {rejecting && (
-          <>
-            <Button size="sm" variant="destructive" disabled={busy || !feedback.trim()} onClick={() => decide("rejected")}>Confirm rejection</Button>
-            <Button size="sm" variant="ghost" disabled={busy} onClick={() => setRejecting(false)}>Cancel</Button>
-          </>
-        )}
-      </div>
+      <div className="mt-4"><ReviewActions kind={item.kind} id={item.id} status={item.status} title={item.title} /></div>
     </li>
   );
 }

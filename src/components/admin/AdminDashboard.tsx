@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { LayoutGrid, Pencil, Plus, Search, Table2, Trash2 } from "lucide-react";
+import { Eye, LayoutGrid, Pencil, Plus, Search, Table2, Trash2 } from "lucide-react";
 import { Badge } from "@/components/Badge";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { Button } from "@/components/ui/button";
@@ -144,7 +144,7 @@ export function AdminDashboard({ initialStudents }: { initialStudents: AdminStud
                   <Badge level={s.badge} size="sm" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="truncate text-lg font-bold">{s.name}</h2>
+                  <h2 className="truncate text-lg font-bold"><Link href={`/admin/students/${s.id}`} className="hover:underline">{s.name}</Link></h2>
                   <p className="truncate text-sm text-muted-foreground">{s.email ?? "No email"}</p>
                   <p className={cn("text-sm", trackColor(s.track))}>{s.track}</p>
                 </div>
@@ -154,7 +154,7 @@ export function AdminDashboard({ initialStudents }: { initialStudents: AdminStud
           ))}
         </div>
       ) : (
-        <Card className="overflow-x-auto">
+        <Card className="relative overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead className="border-b border-border bg-secondary/60 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -168,7 +168,7 @@ export function AdminDashboard({ initialStudents }: { initialStudents: AdminStud
             <tbody>
               {visible.map((s) => (
                 <tr key={s.id} className="border-b border-border/30 last:border-0">
-                  <td className="p-4 font-medium">{s.name}</td>
+                  <td className="p-4 font-medium"><Link href={`/admin/students/${s.id}`} className="hover:underline">{s.name}</Link></td>
                   <td className="p-4 text-muted-foreground">{s.email ?? "—"}</td>
                   <td className={cn("p-4", trackColor(s.track))}>{s.track}</td>
                   <td className="p-4">
@@ -213,7 +213,12 @@ export function AdminDashboard({ initialStudents }: { initialStudents: AdminStud
 
 function RowActions({ student, onDelete }: { student: AdminStudent; onDelete: (s: AdminStudent) => void }) {
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
+      <Button asChild size="sm" variant="secondary">
+        <Link href={`/admin/students/${student.id}`}>
+          <Eye /> Profile
+        </Link>
+      </Button>
       <Button asChild variant="outline" size="sm">
         <Link href={`/admin/students/${student.id}/edit`}>
           <Pencil /> Edit

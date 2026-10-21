@@ -20,7 +20,7 @@ export default async function CertificatesPage() {
       {certs.length === 0 ? (
         <EmptyState title="No certificates issued yet">They appear here once a student completes a certificate-eligible badge.</EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+        <div className="relative overflow-x-auto rounded-2xl border border-border bg-card">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="border-b border-border bg-secondary/60 text-xs uppercase tracking-wide text-muted-foreground">
               <tr><th className="p-4">Student</th><th className="p-4">Badge</th><th className="p-4">Number</th><th className="p-4">Issued</th><th className="p-4">Status</th><th className="p-4">Actions</th></tr>

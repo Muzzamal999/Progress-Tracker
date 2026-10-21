@@ -16,7 +16,7 @@ const PAGE_STEP = 10;
  * Document card: first-page cover, page count, and a "Read online" reader that lists the pages one under
  * another (rendered by Cloudinary, loaded lazily) plus Open / Download buttons for the original PDF.
  */
-export function PdfViewer({ pdf, label = "PDF document" }: { pdf: PdfDoc; label?: string }) {
+export function PdfViewer({ pdf, label = "PDF document", openHref, downloadHref }: { pdf: PdfDoc; label?: string; openHref?: string; downloadHref?: string }) {
   const [open, setOpen] = useState(false);
   const [shown, setShown] = useState(PAGE_STEP);
   const pages = Math.max(1, pdf.pages || 1);
@@ -37,8 +37,8 @@ export function PdfViewer({ pdf, label = "PDF document" }: { pdf: PdfDoc; label?
             <Button type="button" size="sm" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
               {open ? <ChevronUp /> : <ChevronDown />} {open ? "Close reader" : "Read online"}
             </Button>
-            <Button asChild size="sm" variant="outline"><a href={pdf.url} target="_blank" rel="noopener noreferrer"><ExternalLink /> Open</a></Button>
-            <Button asChild size="sm" variant="outline"><a href={download(pdf)}><Download /> Download</a></Button>
+            <Button asChild size="sm" variant="outline"><a href={openHref ?? pdf.url} target="_blank" rel="noopener noreferrer"><ExternalLink /> Open</a></Button>
+            <Button asChild size="sm" variant="outline"><a href={downloadHref ?? download(pdf)}><Download /> Download</a></Button>
           </div>
         </div>
       </div>

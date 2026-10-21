@@ -3,15 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Award, BookOpen, ClipboardCheck, ExternalLink, GraduationCap, LayoutDashboard, Menu, Palette, ScrollText, UserPlus, X } from "lucide-react";
+import { Award, BookOpen, CalendarClock, ClipboardCheck, ExternalLink, FileText, FolderGit2, GraduationCap, LayoutDashboard, Menu, Palette, ScrollText, UserPlus, X } from "lucide-react";
 import { LogoutButton } from "@/components/admin/LogoutButton";
 import { LogoMark } from "@/components/SiteLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { href: "/admin", label: "Students", icon: LayoutDashboard, match: (p: string) => p === "/admin" || /^\/admin\/students\/[^/]+\/edit/.test(p) },
+  { href: "/admin", label: "Students", icon: LayoutDashboard, match: (p: string) => p === "/admin" || /^\/admin\/students\/(?!new)[^/]+(\/edit)?$/.test(p) },
   { href: "/admin/students/new", label: "Add student", icon: UserPlus, match: (p: string) => p === "/admin/students/new" },
+  { href: "/admin/projects", label: "Project review", icon: FolderGit2, match: (p: string) => p.startsWith("/admin/projects") },
+  { href: "/admin/reports", label: "Daily reports", icon: FileText, match: (p: string) => p.startsWith("/admin/reports") },
+  { href: "/admin/deadlines", label: "Deadlines", icon: CalendarClock, match: (p: string) => p.startsWith("/admin/deadlines") },
   { href: "/admin/review", label: "Review queue", icon: ClipboardCheck, match: (p: string) => p.startsWith("/admin/review") },
   { href: "/admin/academics", label: "Classes & tasks", icon: GraduationCap, match: (p: string) => p.startsWith("/admin/academics") },
   { href: "/admin/manuals", label: "Lab manuals", icon: BookOpen, match: (p: string) => p.startsWith("/admin/manuals") },

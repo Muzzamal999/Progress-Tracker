@@ -24,14 +24,14 @@ export default async function ReviewPage({ searchParams }: { searchParams: Promi
   if (kind === "submission") {
     const { data } = await supabase.from("submissions").select("*, students(name)").eq("status", status).order("submitted_at", { ascending: status === "pending" }).limit(50);
     items = ((data ?? []) as (SubmissionRow & { students: { name: string } | null })[]).map((s) => ({
-      kind: "submission", id: s.id, studentName: s.students?.name ?? "Unknown", title: s.title,
+      kind: "submission", id: s.id, studentId: s.student_id, studentName: s.students?.name ?? "Unknown", title: s.title,
       meta: `${s.type} project · ${new Date(s.submitted_at).toLocaleDateString("en-GB")}${s.resubmit_count ? " · resubmitted" : ""}`,
       body: s.description, link: s.link, attachments: s.attachments, labReport: s.lab_report, status: s.status, feedback: s.feedback,
     }));
   } else {
     const { data } = await supabase.from("daily_reports").select("*, students(name)").eq("status", status).order("report_date", { ascending: false }).limit(50);
     items = ((data ?? []) as (ReportRow & { students: { name: string } | null })[]).map((r) => ({
-      kind: "report", id: r.id, studentName: r.students?.name ?? "Unknown", title: `Report for ${r.report_date}`,
+      kind: "report", id: r.id, studentId: r.student_id, studentName: r.students?.name ?? "Unknown", title: `Report for ${r.report_date}`,
       meta: r.hours_spent != null ? `${r.hours_spent} h` : "Daily report",
       body: [r.summary, r.blockers ? `Blockers: ${r.blockers}` : ""].filter(Boolean).join("\n\n"), link: null, attachments: r.attachments, status: r.status, feedback: r.feedback,
     }));

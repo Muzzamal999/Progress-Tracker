@@ -134,6 +134,8 @@ const reportSchema = z.object({
   hours: z.number().min(0).max(24).nullable().optional(),
   blockers: z.string().trim().max(2000).optional().default(""),
   attachments: evidenceList(0),
+  submissionIds: z.array(z.uuid()).max(20).optional().default([]),
+  taskIds: z.array(z.uuid()).max(20).optional().default([]),
 });
 
 export async function submitReportAction(raw: unknown): Promise<ActionResult> {
@@ -150,6 +152,8 @@ export async function submitReportAction(raw: unknown): Promise<ActionResult> {
       hours_spent: v.hours ?? null,
       blockers: v.blockers,
       attachments: v.attachments.map((a) => ({ url: a.url, public_id: a.publicId })),
+      submission_ids: v.submissionIds,
+      task_ids: v.taskIds,
     },
   });
   if (error) {
