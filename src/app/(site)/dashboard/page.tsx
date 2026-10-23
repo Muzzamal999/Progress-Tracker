@@ -102,7 +102,7 @@ export default async function DashboardPage() {
             {certs.map((c) => (
               <li key={c.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 shadow-(--shadow-card)">
                 <div className="min-w-0">
-                  <p className="font-semibold">{c.badge_name}</p>
+                  <p className="font-semibold">{c.certificate_type === "completion" ? c.batch_name : c.badge_name}</p>
                   <p className="truncate text-xs text-muted-foreground">{c.certificate_number}</p>
                 </div>
                 <div className="flex gap-2">

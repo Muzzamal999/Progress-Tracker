@@ -102,13 +102,20 @@ export interface BadgeRule {
   certificate_eligible: boolean;
   is_active: boolean;
 }
+export type CertificateType = "skill" | "completion";
 export interface CertificateRow {
   id: string;
   certificate_number: string;
+  certificate_type: CertificateType;
   student_id: string;
   student_name: string;
-  badge_name: string;
+  badge_name: string | null;
   verified_projects: number;
+  batch_id: string | null;
+  program_name: string | null;
+  batch_name: string | null;
+  started_on: string | null;
+  completed_on: string | null;
   issued_at: string;
   revoked_at: string | null;
   revoke_reason: string | null;
@@ -119,16 +126,18 @@ export interface OrgSettings {
   logo_url: string | null;
   logo_public_id: string | null;
   accent_color: string;
+  secondary_color: string;
   signatory_name: string | null;
   signatory_title: string | null;
   certificate_footer: string | null;
 }
 export const DEFAULT_ORG: OrgSettings = {
-  org_name: "Student Journey Atlas",
+  org_name: "DOONKHAV Technologies",
   tagline: null,
   logo_url: null,
   logo_public_id: null,
-  accent_color: "#4f46e5",
+  accent_color: "#0B2D4A",
+  secondary_color: "#D5A33B",
   signatory_name: null,
   signatory_title: null,
   certificate_footer: null,

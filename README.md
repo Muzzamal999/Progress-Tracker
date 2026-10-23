@@ -55,6 +55,9 @@ Package manager: **npm** (`package-lock.json` is the only lockfile).
 ## Deadlines, daily-report PDFs, project review, password recovery
 See [`supabase/DEADLINES_REPORTS_RECOVERY.md`](supabase/DEADLINES_REPORTS_RECOVERY.md) for behaviour, the **ordered production rollout (apply migration `0006` before deploying)**, Supabase email-template / redirect-URL settings and the test commands.
 
+## DOONKHAV rebrand and program completion certificates
+Apply `supabase/migrations/0007_doonkhav_certificates.sql` (same safe-apply pattern as `0003`, see below) to: rebrand `organization_settings` to the DOONKHAV navy/gold defaults (only if it is still at the factory defaults — a site that already customised branding keeps its own colours and name), add a `secondary_color` branding field, and add a second, admin-triggered "program completion" certificate type alongside the existing automatic badge/skill certificates. No existing column changes type and no row is deleted.
+
 ## Applying migration 0003 safely
 - Apply `supabase/migrations/0003_student_progress.sql` **once**, as a single transaction, from the repo file itself. Do not copy SQL out of chat or email; use the file or the GitHub "Copy raw file" button and confirm it has 653 lines.
 - Preferred (exact error messages, automatic rollback): `psql "<connection string from Supabase → Connect>" -v ON_ERROR_STOP=1 -1 -f supabase/migrations/0003_student_progress.sql`.
