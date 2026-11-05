@@ -13,6 +13,7 @@ const TABS = [
   { href: "/dashboard/projects", label: "Projects" },
   { href: "/dashboard/reports", label: "Daily reports" },
   { href: "/dashboard/library", label: "Tasks & manuals" },
+  { href: "/dashboard/exchange", label: "Class exchange" },
 ];
 
 export function StudentNav({ name, profileDone }: { name: string; profileDone: boolean }) {
