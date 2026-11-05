@@ -19,12 +19,12 @@ async function guarded<T = undefined>(fn: (sb: Sb) => Promise<ActionResult<T>>):
     return { ok: false, error: "Something went wrong" };
   }
 }
-const fail = (error: { code?: string; message: string }): ActionResult => {
+const fail = (error: { code?: string; message: string }): { ok: false; error: string } => {
   if (error.code === "P0001" || error.code === "42501") return { ok: false, error: error.message };
   console.error("exchange admin db error", error);
   return { ok: false, error: error.message || "Database error" };
 };
-const bad = (e: z.ZodError): ActionResult => ({ ok: false, error: e.issues[0]?.message ?? "Invalid data" });
+const bad = (e: z.ZodError): { ok: false; error: string } => ({ ok: false, error: e.issues[0]?.message ?? "Invalid data" });
 const text = (max: number) => z.string().trim().max(max).optional().default("");
 const orNull = (v: string | undefined | null) => (v ? v : null);
 const dateOrEmpty = z.string().trim().optional().default("").refine((v) => v === "" || isDateString(v), "Choose a valid date");
