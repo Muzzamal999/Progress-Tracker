@@ -1,7 +1,7 @@
 import "server-only";
 import { v2 as cloudinary } from "cloudinary";
 
-export const UPLOAD_PURPOSES = ["avatar", "evidence", "manual", "branding", "manualpdf", "labreport"] as const;
+export const UPLOAD_PURPOSES = ["avatar", "evidence", "manual", "branding", "manualpdf", "labreport", "exchangepdf"] as const;
 export type UploadPurpose = (typeof UPLOAD_PURPOSES)[number];
 const FOLDERS: Record<UploadPurpose, string> = {
   avatar: "student-journey/avatars",
@@ -10,9 +10,10 @@ const FOLDERS: Record<UploadPurpose, string> = {
   branding: "student-journey/branding",
   manualpdf: "student-journey/manual-pdfs",
   labreport: "student-journey/lab-reports",
+  exchangepdf: "student-journey/exchange-pdfs",
 };
 /** Purposes that carry a PDF instead of an image. */
-export const PDF_PURPOSES: readonly UploadPurpose[] = ["manualpdf", "labreport"];
+export const PDF_PURPOSES: readonly UploadPurpose[] = ["manualpdf", "labreport", "exchangepdf"];
 export const MAX_PDF_BYTES = 10 * 1024 * 1024;
 export const CLOUDINARY_ROOT = "student-journey/";
 export const CLOUDINARY_FOLDER = FOLDERS.avatar;
@@ -76,7 +77,7 @@ export async function verifyUploadedImage(publicId: string): Promise<{ ok: true 
 }
 
 /** Same ownership rule as isOwnAsset, for a PDF uploaded to one of the PDF folders. */
-export function isOwnPdf(publicId: string, url: string, purpose: "manualpdf" | "labreport"): boolean {
+export function isOwnPdf(publicId: string, url: string, purpose: "manualpdf" | "labreport" | "exchangepdf"): boolean {
   return isOwnAsset(publicId, url, purpose);
 }
 

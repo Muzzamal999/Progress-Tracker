@@ -11,7 +11,7 @@ export interface UploadedPdf {
   pages: number;
   bytes: number;
 }
-type PdfPurpose = "manualpdf" | "labreport";
+type PdfPurpose = "manualpdf" | "labreport" | "exchangepdf";
 
 export const MAX_PDF_MB = 10;
 

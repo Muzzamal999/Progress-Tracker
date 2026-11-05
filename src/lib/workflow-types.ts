@@ -131,6 +131,65 @@ export interface OrgSettings {
   signatory_title: string | null;
   certificate_footer: string | null;
 }
+// ===== class exchange (anonymous provider/acceptor communication portal) =====
+export type ExchangeStatus = "draft" | "open" | "closed";
+export type ExchangeRole = "provider" | "acceptor";
+export type ConnectionStatus = "pending" | "active" | "rejected" | "ended";
+export interface ExchangeLink {
+  label: string;
+  url: string;
+}
+export interface ExchangeRow {
+  id: string;
+  title: string;
+  description: string | null;
+  status: ExchangeStatus;
+  is_anonymous: boolean;
+  requires_approval: boolean;
+  max_connections_per_acceptor: number | null;
+  max_connections_per_provider: number | null;
+  opens_at: string | null;
+  closes_at: string | null;
+  created_at: string;
+}
+export interface ExchangeParticipantRow {
+  exchange_id: string;
+  student_id: string;
+  role: ExchangeRole;
+  added_at: string;
+}
+export interface ExchangeListingRow {
+  id: string;
+  exchange_id: string;
+  provider_student_id: string;
+  project_name: string;
+  description: string | null;
+  links: ExchangeLink[];
+  pdf: PdfDoc | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+export interface ExchangeConnectionRow {
+  id: string;
+  exchange_id: string;
+  listing_id: string | null;
+  provider_student_id: string;
+  acceptor_student_id: string;
+  status: ConnectionStatus;
+  requested_at: string;
+  decided_at: string | null;
+  ended_at: string | null;
+  ended_reason: string | null;
+}
+export interface ExchangeMessageRow {
+  id: string;
+  connection_id: string;
+  sender_student_id: string;
+  body: string;
+  created_at: string;
+}
+
 export const DEFAULT_ORG: OrgSettings = {
   org_name: "DOONKHAV Technologies",
   tagline: null,
