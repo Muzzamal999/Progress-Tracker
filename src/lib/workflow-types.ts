@@ -156,6 +156,7 @@ export interface ExchangeParticipantRow {
   exchange_id: string;
   student_id: string;
   role: ExchangeRole;
+  reveal_identity: boolean | null;
   added_at: string;
 }
 export interface ExchangeListingRow {

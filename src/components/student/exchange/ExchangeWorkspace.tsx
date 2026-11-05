@@ -70,7 +70,7 @@ export function ExchangeWorkspace({
   const listingName = (listingId: string | null) => browseListings.find((l) => l.id === listingId)?.project_name ?? "your project";
   const counterpartLabel = (c: ExchangeConnectionRow, perspective: "acceptor" | "provider") => {
     const otherId = perspective === "acceptor" ? c.provider_student_id : c.acceptor_student_id;
-    if (!exchange.is_anonymous && counterpartNames[otherId]) return counterpartNames[otherId];
+    if (counterpartNames[otherId]) return counterpartNames[otherId];
     return perspective === "acceptor" ? `Provider — ${listingName(c.listing_id)}` : "Acceptor";
   };
 

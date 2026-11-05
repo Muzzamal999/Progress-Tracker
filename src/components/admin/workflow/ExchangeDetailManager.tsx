@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 import { NativeSelect, Textarea } from "@/components/ui/textarea";
 import {
-  deleteExchangeAction, decideConnectionAction, endConnectionAction, forceConnectionAction, saveExchangeAction, setExchangeParticipantsAction,
+  deleteExchangeAction, decideConnectionAction, endConnectionAction, forceConnectionAction, saveExchangeAction, setExchangeParticipantsAction, setParticipantRevealAction,
 } from "@/app/actions/admin-exchange";
 import { formatPkt, toPktInputs } from "@/lib/time";
 import type { ActionResult } from "@/app/actions/students";
@@ -97,7 +97,9 @@ function SettingsPanel({ exchange }: { exchange: ExchangeRow }) {
   );
 }
 
-function ParticipantPicker({ exchangeId, role, members, roster }: { exchangeId: string; role: "provider" | "acceptor"; members: RosterOption[]; roster: RosterOption[] }) {
+interface Member extends RosterOption { reveal: boolean | null }
+
+function ParticipantPicker({ exchangeId, role, members, roster }: { exchangeId: string; role: "provider" | "acceptor"; members: Member[]; roster: RosterOption[] }) {
   const { run, busy } = useRun();
   const [query, setQuery] = useState("");
   const [classId, setClassId] = useState("");
@@ -117,14 +119,29 @@ function ParticipantPicker({ exchangeId, role, members, roster }: { exchangeId: 
     save([...new Set([...memberIds, ...pool])]);
   };
 
+  const { run: runReveal, busy: revealBusy } = useRun();
+  const setReveal = (studentId: string, reveal: boolean | null) =>
+    runReveal(() => setParticipantRevealAction({ exchangeId, studentId, role, reveal }));
+
   return (
     <div className="space-y-3">
       <p className="text-sm font-semibold capitalize">{role}s ({members.length})</p>
-      <ul className="flex flex-wrap gap-2">
+      <ul className="space-y-1.5">
         {members.map((m) => (
-          <li key={m.id} className="flex items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-1 text-xs">
-            {m.name}
-            <button type="button" aria-label={`Remove ${m.name}`} disabled={busy} onClick={() => removeOne(m.id)} className="text-muted-foreground hover:text-destructive"><UserMinus className="h-3 w-3" /></button>
+          <li key={m.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-secondary/60 px-3 py-1.5 text-xs">
+            <span className="font-medium">{m.name}</span>
+            <NativeSelect
+              aria-label={`Show ${m.name}'s identity to who they talk to`}
+              className="h-7 w-auto px-2 py-0 text-xs"
+              value={m.reveal === null ? "default" : m.reveal ? "show" : "hide"}
+              disabled={revealBusy}
+              onChange={(e) => setReveal(m.id, e.target.value === "default" ? null : e.target.value === "show")}
+            >
+              <option value="default">Exchange default</option>
+              <option value="show">Always show identity</option>
+              <option value="hide">Always hide identity</option>
+            </NativeSelect>
+            <button type="button" aria-label={`Remove ${m.name}`} disabled={busy} onClick={() => removeOne(m.id)} className="ml-auto text-muted-foreground hover:text-destructive"><UserMinus className="h-3 w-3" /></button>
           </li>
         ))}
         {members.length === 0 && <li className="text-xs text-muted-foreground">No one added yet.</li>}
@@ -244,8 +261,12 @@ export function ExchangeDetailManager({
 }) {
   const byId = useMemo(() => new Map(roster.map((r) => [r.id, r])), [roster]);
   const nameOf = (id: string) => byId.get(id)?.name ?? "Unknown student";
-  const providers = participants.filter((p) => p.role === "provider").map((p) => byId.get(p.student_id)).filter((x): x is RosterOption => !!x);
-  const acceptors = participants.filter((p) => p.role === "acceptor").map((p) => byId.get(p.student_id)).filter((x): x is RosterOption => !!x);
+  const toMember = (p: ExchangeParticipantRow): Member | null => {
+    const o = byId.get(p.student_id);
+    return o ? { ...o, reveal: p.reveal_identity } : null;
+  };
+  const providers = participants.filter((p) => p.role === "provider").map(toMember).filter((x): x is Member => !!x);
+  const acceptors = participants.filter((p) => p.role === "acceptor").map(toMember).filter((x): x is Member => !!x);
 
   return (
     <div className="space-y-6">

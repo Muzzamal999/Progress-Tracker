@@ -113,6 +113,23 @@ export async function setExchangeParticipantsAction(raw: unknown): Promise<Actio
   });
 }
 
+const revealSchema = z.object({ exchangeId: z.uuid(), studentId: z.uuid(), role: z.enum(["provider", "acceptor"]), reveal: z.boolean().nullable() });
+/** Overrides whether one specific participant's name is shown to whoever they end up talking to. null = follow the exchange default. */
+export async function setParticipantRevealAction(raw: unknown): Promise<ActionResult> {
+  const p = revealSchema.safeParse(raw);
+  if (!p.success) return bad(p.error);
+  const v = p.data;
+  return guarded(async (sb) => {
+    const { error } = await sb
+      .from("exchange_participants")
+      .update({ reveal_identity: v.reveal })
+      .eq("exchange_id", v.exchangeId)
+      .eq("student_id", v.studentId)
+      .eq("role", v.role);
+    return error ? fail(error) : { ok: true };
+  });
+}
+
 // ---------- connections ----------
 export async function decideConnectionAction(connectionId: string, decision: "approved" | "rejected"): Promise<ActionResult> {
   if (!z.uuid().safeParse(connectionId).success) return { ok: false, error: "Invalid request" };

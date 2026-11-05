@@ -30,12 +30,17 @@ export default async function ExchangeWorkspacePage({ params }: PageProps<"/dash
     isAcceptor ? sb.from("exchange_listings").select("*").eq("exchange_id", id).eq("is_active", true) : Promise.resolve({ data: [] }),
   ]);
 
-  // Identities stay hidden by default; only resolved when this exchange explicitly turns anonymity off.
+  // Whether a counterpart's name is shown is resolved per that specific student (admin override), falling
+  // back to the exchange's own anonymity default — never assumed from the exchange setting alone.
   let counterpartNames: Record<string, string> = {};
-  if (!(exchange as ExchangeRow).is_anonymous && connections.length > 0) {
+  if (connections.length > 0) {
     const otherIds = [...new Set(connections.map((c) => (c.provider_student_id === student.id ? c.acceptor_student_id : c.provider_student_id)))];
-    const { data: others } = await sb.from("students").select("id, name").in("id", otherIds);
-    counterpartNames = Object.fromEntries((others ?? []).map((o) => [o.id, o.name]));
+    const { data: reveals } = await sb.rpc("exchange_identity_reveals", { p_exchange: id, p_student_ids: otherIds });
+    const revealedIds = ((reveals ?? []) as { student_id: string; reveal: boolean }[]).filter((r) => r.reveal).map((r) => r.student_id);
+    if (revealedIds.length > 0) {
+      const { data: others } = await sb.from("students").select("id, name").in("id", revealedIds);
+      counterpartNames = Object.fromEntries((others ?? []).map((o) => [o.id, o.name]));
+    }
   }
 
   return (
