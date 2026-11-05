@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Award, BookOpen, CalendarClock, ClipboardCheck, ExternalLink, FileText, FolderGit2, GraduationCap, LayoutDashboard, Menu, Palette, ScrollText, UserPlus, X } from "lucide-react";
+import { Award, BookOpen, CalendarClock, ClipboardCheck, ExternalLink, FileText, FolderGit2, GraduationCap, LayoutDashboard, Menu, Palette, ScrollText, Shuffle, UserPlus, X } from "lucide-react";
 import { LogoutButton } from "@/components/admin/LogoutButton";
 import { LogoMark } from "@/components/SiteLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -18,6 +18,7 @@ const NAV = [
   { href: "/admin/review", label: "Review queue", icon: ClipboardCheck, match: (p: string) => p.startsWith("/admin/review") },
   { href: "/admin/academics", label: "Classes & tasks", icon: GraduationCap, match: (p: string) => p.startsWith("/admin/academics") },
   { href: "/admin/manuals", label: "Lab manuals", icon: BookOpen, match: (p: string) => p.startsWith("/admin/manuals") },
+  { href: "/admin/exchanges", label: "Class exchange", icon: Shuffle, match: (p: string) => p.startsWith("/admin/exchanges") },
   { href: "/admin/badges", label: "Badge rules", icon: Award, match: (p: string) => p.startsWith("/admin/badges") },
   { href: "/admin/certificates", label: "Certificates", icon: ScrollText, match: (p: string) => p.startsWith("/admin/certificates") },
   { href: "/admin/settings", label: "Branding", icon: Palette, match: (p: string) => p.startsWith("/admin/settings") },
