@@ -10,8 +10,8 @@ export async function POST(request: Request) {
   if (!UPLOAD_PURPOSES.includes(purpose)) return NextResponse.json({ error: "Unknown upload type" }, { status: 400 });
 
   const isAdmin = !!(await getAdminUserId());
-  let allowed = isAdmin && purpose !== "evidence" && purpose !== "labreport";
-  if (!allowed && (purpose === "avatar" || purpose === "evidence" || purpose === "labreport")) allowed = !!(await getStudentSession());
+  let allowed = isAdmin && purpose !== "evidence" && purpose !== "labreport" && purpose !== "exchangepdf";
+  if (!allowed && (purpose === "avatar" || purpose === "evidence" || purpose === "labreport" || purpose === "exchangepdf")) allowed = !!(await getStudentSession());
   if (allowed && !isAdmin && purpose === "avatar" && (await getStudentSession())?.student.profile_completed_at) allowed = false; // profile is locked
   if (!allowed) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

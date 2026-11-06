@@ -165,7 +165,8 @@ export async function saveBadgeRulesAction(raw: unknown): Promise<ActionResult> 
 // ---------- organisation branding ----------
 const orgSchema = z.object({
   orgName: z.string().trim().min(1, "Organisation name is required").max(120), tagline: text(200),
-  accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a hex colour like #4f46e5"),
+  accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a hex colour like #0B2D4A"),
+  secondaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a hex colour like #D5A33B"),
   signatoryName: text(120), signatoryTitle: text(120), certificateFooter: text(300),
   newLogo: asset.optional(), removeLogo: z.boolean().optional(),
 });
@@ -181,8 +182,9 @@ export async function saveOrgAction(raw: unknown): Promise<ActionResult> {
   return guarded(async (sb) => {
     const { data: old } = await sb.from("organization_settings").select("logo_public_id").maybeSingle();
     const row: Record<string, unknown> = {
-      org_name: v.orgName, tagline: orNull(v.tagline), accent_color: v.accentColor, signatory_name: orNull(v.signatoryName),
-      signatory_title: orNull(v.signatoryTitle), certificate_footer: orNull(v.certificateFooter), updated_at: new Date().toISOString(),
+      org_name: v.orgName, tagline: orNull(v.tagline), accent_color: v.accentColor, secondary_color: v.secondaryColor,
+      signatory_name: orNull(v.signatoryName), signatory_title: orNull(v.signatoryTitle),
+      certificate_footer: orNull(v.certificateFooter), updated_at: new Date().toISOString(),
     };
     if (v.newLogo) Object.assign(row, { logo_url: v.newLogo.url, logo_public_id: v.newLogo.publicId });
     else if (v.removeLogo) Object.assign(row, { logo_url: null, logo_public_id: null });
@@ -197,6 +199,13 @@ export async function saveOrgAction(raw: unknown): Promise<ActionResult> {
 }
 
 // ---------- certificates ----------
+export async function issueCompletionCertificateAction(studentId: string, batchId: string): Promise<ActionResult> {
+  if (!z.uuid().safeParse(studentId).success || !z.uuid().safeParse(batchId).success) return { ok: false, error: "Invalid request" };
+  return guarded(async (sb) => {
+    const { error } = await sb.rpc("issue_completion_certificate", { p_student: studentId, p_batch: batchId });
+    return error ? fail(error) : { ok: true };
+  });
+}
 export async function setCertificateRevokedAction(id: string, revoke: boolean, reason?: string): Promise<ActionResult> {
   if (!z.uuid().safeParse(id).success) return { ok: false, error: "Invalid id" };
   return guarded(async (sb) => {

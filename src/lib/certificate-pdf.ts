@@ -1,42 +1,64 @@
 import "server-only";
-import { PDFDocument, StandardFonts, rgb, type PDFImage } from "pdf-lib";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { PDFDocument, StandardFonts, rgb, type PDFImage, type PDFPage } from "pdf-lib";
 import QRCode from "qrcode";
 import type { CertificateRow, OrgSettings } from "./workflow-types";
 
 const W = 842; // A4 landscape, points
 const H = 595;
+const DEFAULT_LOGO_PATH = path.join(process.cwd(), "public", "brand", "doonkhav-logo.png");
 
 function hexToRgb(hex: string) {
   const n = parseInt(hex.replace("#", ""), 16);
   return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
 }
 
-/** Only fetch logos hosted on our Cloudinary cloud; skip silently on any failure. */
+/** Logos hosted on our Cloudinary cloud are fetched live; otherwise fall back to the bundled default mark. */
 async function loadLogo(pdf: PDFDocument, url: string | null): Promise<PDFImage | null> {
   const cloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  if (!url || !cloud || !url.startsWith(`https://res.cloudinary.com/${cloud}/`)) return null;
+  if (url && cloud && url.startsWith(`https://res.cloudinary.com/${cloud}/`)) {
+    try {
+      // Ask Cloudinary for a PNG so webp uploads can be embedded too.
+      const pngUrl = url.replace("/image/upload/", "/image/upload/f_png,w_400/").replace(/\.(webp|jpg|jpeg|png)$/i, ".png");
+      const res = await fetch(pngUrl, { signal: AbortSignal.timeout(5000) });
+      if (res.ok) return await pdf.embedPng(new Uint8Array(await res.arrayBuffer()));
+    } catch {
+      // fall through to the bundled default below
+    }
+  }
   try {
-    // Ask Cloudinary for a PNG so webp uploads can be embedded too.
-    const pngUrl = url.replace("/image/upload/", "/image/upload/f_png,w_400/").replace(/\.(webp|jpg|jpeg|png)$/i, ".png");
-    const res = await fetch(pngUrl, { signal: AbortSignal.timeout(5000) });
-    if (!res.ok) return null;
-    return await pdf.embedPng(new Uint8Array(await res.arrayBuffer()));
+    return await pdf.embedPng(await readFile(DEFAULT_LOGO_PATH));
   } catch {
     return null;
   }
 }
 
+/** Thin double-line border with a small gold L-shaped accent in each corner. */
+function drawFrame(page: PDFPage, primary: ReturnType<typeof rgb>, secondary: ReturnType<typeof rgb>) {
+  page.drawRectangle({ x: 18, y: 18, width: W - 36, height: H - 36, borderColor: primary, borderWidth: 2.5 });
+  page.drawRectangle({ x: 26, y: 26, width: W - 52, height: H - 52, borderColor: secondary, borderWidth: 0.75 });
+  const corner = 26;
+  const corners: [number, number, 1 | -1, 1 | -1][] = [[40, H - 40, 1, -1], [W - 40, H - 40, -1, -1], [40, 40, 1, 1], [W - 40, 40, -1, 1]];
+  for (const [x, y, dx, dy] of corners) {
+    page.drawLine({ start: { x, y }, end: { x: x + dx * corner, y }, thickness: 2, color: secondary });
+    page.drawLine({ start: { x, y }, end: { x, y: y + dy * corner }, thickness: 2, color: secondary });
+  }
+}
+
 export async function renderCertificatePdf(cert: CertificateRow, org: OrgSettings, verifyUrl: string): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
+  const isCompletion = cert.certificate_type === "completion";
   pdf.setTitle(`Certificate ${cert.certificate_number}`);
   pdf.setAuthor(org.org_name);
-  pdf.setSubject(`${cert.badge_name} achievement for ${cert.student_name}`);
+  pdf.setSubject(isCompletion ? `${cert.batch_name} completion for ${cert.student_name}` : `${cert.badge_name} achievement for ${cert.student_name}`);
   const page = pdf.addPage([W, H]);
   const serifBold = await pdf.embedFont(StandardFonts.TimesRomanBold);
   const serif = await pdf.embedFont(StandardFonts.TimesRoman);
   const sans = await pdf.embedFont(StandardFonts.Helvetica);
   const sansBold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const accent = hexToRgb(org.accent_color);
+  const primary = hexToRgb(org.accent_color);
+  const secondary = hexToRgb(org.secondary_color);
   const ink = rgb(0.1, 0.12, 0.2);
   const muted = rgb(0.38, 0.4, 0.48);
 
@@ -50,31 +72,42 @@ export async function renderCertificatePdf(cert: CertificateRow, org: OrgSetting
     return s;
   };
 
-  // frame
-  page.drawRectangle({ x: 20, y: 20, width: W - 40, height: H - 40, borderColor: accent, borderWidth: 4 });
-  page.drawRectangle({ x: 30, y: 30, width: W - 60, height: H - 60, borderColor: accent, borderWidth: 1, opacity: 0.6 });
+  drawFrame(page, primary, secondary);
 
   // header: logo + organisation
   const logo = await loadLogo(pdf, org.logo_url);
-  let top = H - 80;
+  let top = H - 76;
   if (logo) {
-    const scale = Math.min(70 / logo.height, 180 / logo.width);
+    const scale = Math.min(66 / logo.height, 160 / logo.width);
     const lw = logo.width * scale;
     const lh = logo.height * scale;
     page.drawImage(logo, { x: (W - lw) / 2, y: top - lh + 20, width: lw, height: lh });
     top -= lh + 6;
   }
-  center(org.org_name.toUpperCase(), top - 10, fit(org.org_name, sansBold, 16, 600), sansBold, accent);
-  if (org.tagline) center(org.tagline, top - 28, 10, sans, muted);
+  center(org.org_name.toUpperCase(), top - 10, fit(org.org_name, sansBold, 15, 600), sansBold, primary);
+  if (org.tagline) center(org.tagline, top - 27, 9.5, sans, muted);
+  page.drawLine({ start: { x: W / 2 - 60, y: top - 35 }, end: { x: W / 2 + 60, y: top - 35 }, thickness: 1, color: secondary });
 
-  center("Certificate of Achievement", H - 215, 40, serifBold);
-  center("This is to certify that", H - 245, 14, serif, muted);
-  const nameSize = fit(cert.student_name, serifBold, 38, W - 160);
-  center(cert.student_name, H - 292, nameSize, serifBold, accent);
-  page.drawLine({ start: { x: 220, y: H - 302 }, end: { x: W - 220, y: H - 302 }, thickness: 0.8, color: accent });
-  center("has achieved the level of", H - 326, 14, serif, muted);
-  center(`${cert.badge_name}`, H - 358, fit(cert.badge_name, serifBold, 30, W - 200), serifBold);
-  center(`with ${cert.verified_projects} verified, Admin-approved project${cert.verified_projects === 1 ? "" : "s"}`, H - 382, 14, serif, ink);
+  const title = isCompletion ? "Certificate of Program Completion" : "Certificate of Skill Achievement";
+  center(title, H - 212, fit(title, serifBold, 34, W - 140), serifBold, primary);
+  center("This is to certify that", H - 242, 13, serif, muted);
+  const nameSize = fit(cert.student_name, serifBold, 36, W - 160);
+  center(cert.student_name, H - 286, nameSize, serifBold, ink);
+  page.drawLine({ start: { x: 220, y: H - 296 }, end: { x: W - 220, y: H - 296 }, thickness: 0.8, color: secondary });
+
+  if (isCompletion) {
+    center("has successfully completed the program", H - 322, 13, serif, muted);
+    center(`${cert.batch_name}`, H - 354, fit(cert.batch_name ?? "", serifBold, 26, W - 200), serifBold, primary);
+    if (cert.program_name) center(cert.program_name, H - 376, 11.5, sans, muted);
+    const span = cert.started_on && cert.completed_on
+      ? `${new Date(cert.started_on).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" })} – ${new Date(cert.completed_on).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" })}`
+      : null;
+    if (span) center(span, H - 396, 10.5, sans, muted);
+  } else {
+    center("has achieved the level of", H - 322, 13, serif, muted);
+    center(`${cert.badge_name}`, H - 354, fit(cert.badge_name ?? "", serifBold, 28, W - 200), serifBold, primary);
+    center(`with ${cert.verified_projects} verified, Admin-approved project${cert.verified_projects === 1 ? "" : "s"}`, H - 378, 13, serif, ink);
+  }
 
   // bottom row: date | QR | signatory
   const issued = new Date(cert.issued_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });

@@ -23,7 +23,7 @@ export function BrandingForm({ org }: { org: OrgSettings }) {
     setBusy(true);
     setError(null);
     const res = await saveOrgAction({
-      orgName: f.get("orgName"), tagline: f.get("tagline"), accentColor: f.get("accent"),
+      orgName: f.get("orgName"), tagline: f.get("tagline"), accentColor: f.get("accent"), secondaryColor: f.get("secondary"),
       signatoryName: f.get("sigName"), signatoryTitle: f.get("sigTitle"), certificateFooter: f.get("footer"),
       newLogo: logo[0], removeLogo,
     });
@@ -39,7 +39,8 @@ export function BrandingForm({ org }: { org: OrgSettings }) {
     <form onSubmit={onSubmit} className="grid max-w-3xl gap-5 sm:grid-cols-2" noValidate>
       <Field id="orgName" label="Organisation name" className="sm:col-span-2"><Input id="orgName" name="orgName" defaultValue={org.org_name} required maxLength={120} /></Field>
       <Field id="tagline" label="Tagline (optional)" className="sm:col-span-2"><Input id="tagline" name="tagline" defaultValue={org.tagline ?? ""} maxLength={200} /></Field>
-      <Field id="accent" label="Accent colour" hint="Used for the certificate frame and name."><Input id="accent" name="accent" type="color" defaultValue={org.accent_color} className="h-11 w-24 p-1" /></Field>
+      <Field id="accent" label="Primary colour" hint="Used for the certificate frame and name."><Input id="accent" name="accent" type="color" defaultValue={org.accent_color} className="h-11 w-24 p-1" /></Field>
+      <Field id="secondary" label="Accent colour" hint="Used for gold detailing and highlights."><Input id="secondary" name="secondary" type="color" defaultValue={org.secondary_color} className="h-11 w-24 p-1" /></Field>
       <div className="space-y-2">
         <p className="text-sm font-medium">Logo</p>
         {org.logo_url && !removeLogo && logo.length === 0 && (

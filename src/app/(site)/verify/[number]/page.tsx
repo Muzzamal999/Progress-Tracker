@@ -9,9 +9,13 @@ export const metadata: Metadata = { title: "Verify certificate", robots: { index
 
 interface Result {
   certificate_number: string;
+  certificate_type: "skill" | "completion";
   student_name: string;
-  badge_name: string;
+  badge_name: string | null;
   verified_projects: number;
+  program_name: string | null;
+  batch_name: string | null;
+  completed_on: string | null;
   issued_at: string;
   valid: boolean;
   revoked_at: string | null;
@@ -47,13 +51,23 @@ async function Verification({ params }: { params: Promise<{ number: string }> })
         </div>
       </div>
       <dl className="mt-6 grid gap-4 sm:grid-cols-2">
-        {[
-          ["Awarded to", row.student_name],
-          ["Achievement level", row.badge_name],
-          ["Verified projects", `${row.verified_projects} Admin-approved`],
-          ["Issued", new Date(row.issued_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })],
-          ["Certificate number", row.certificate_number],
-        ].map(([k, v]) => (
+        {(row.certificate_type === "completion"
+          ? [
+              ["Awarded to", row.student_name],
+              ["Program completed", row.batch_name],
+              ["Class", row.program_name],
+              ["Completed", row.completed_on ? new Date(row.completed_on).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : null],
+              ["Issued", new Date(row.issued_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })],
+              ["Certificate number", row.certificate_number],
+            ]
+          : [
+              ["Awarded to", row.student_name],
+              ["Achievement level", row.badge_name],
+              ["Verified projects", `${row.verified_projects} Admin-approved`],
+              ["Issued", new Date(row.issued_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })],
+              ["Certificate number", row.certificate_number],
+            ]
+        ).filter(([, v]) => v).map(([k, v]) => (
           <div key={k}>
             <dt className="text-xs uppercase tracking-wide text-muted-foreground">{k}</dt>
             <dd className="mt-0.5 font-semibold">{v}</dd>

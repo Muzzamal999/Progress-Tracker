@@ -11,7 +11,9 @@ import { loadOrg } from "@/lib/reports/load";
 import { taskBuckets, type RosterStudent, type SubRow, type TaskInfo } from "@/lib/reports/model";
 import { addDays, formatPkt, formatShortDate, pktDate, pktDayRange } from "@/lib/time";
 import type { BadgeLevel } from "@/lib/types";
-import type { BadgeProgress, ReportRow, SubmissionRow } from "@/lib/workflow-types";
+import type { BadgeProgress, CertificateRow, ReportRow, SubmissionRow } from "@/lib/workflow-types";
+import { CertificateActions } from "@/components/admin/workflow/CertificateActions";
+import { IssueCompletionCertificateButton } from "@/components/admin/workflow/IssueCompletionCertificateButton";
 
 export const metadata = { title: "Student profile" };
 
@@ -39,16 +41,19 @@ export default async function StudentProfilePage({ params }: PageProps<"/admin/s
   const email = (Array.isArray(s.student_private) ? s.student_private[0] : s.student_private)?.email ?? null;
 
   const classId = s.batches?.class_id ?? null;
-  const [{ data: progress }, { data: subs }, { data: reps }, { data: tasks }, org] = await Promise.all([
+  const [{ data: progress }, { data: subs }, { data: reps }, { data: tasks }, org, { data: certs }] = await Promise.all([
     sb.rpc("admin_student_progress", { p_student: id }),
     sb.from("submissions").select("*").eq("student_id", id).order("submitted_at", { ascending: false }),
     sb.from("daily_reports").select("*").eq("student_id", id).order("report_date", { ascending: false }).limit(60),
     classId ? sb.from("tasks").select("id, class_id, batch_id, title, is_active").eq("class_id", classId) : Promise.resolve({ data: [] as TaskInfo[] }),
     loadOrg(sb),
+    sb.from("certificates").select("*").eq("student_id", id).order("issued_at", { ascending: false }),
   ]);
   const ladder = (progress ?? []) as BadgeProgress[];
   const projects = (subs ?? []) as SubmissionRow[];
   const reports = (reps ?? []) as ReportRow[];
+  const certificates = (certs ?? []) as CertificateRow[];
+  const liveCompletionCert = certificates.find((c) => c.certificate_type === "completion" && c.batch_id === s.batch_id && !c.revoked_at);
   const count = (st: string) => projects.filter((p) => p.status === st).length;
   const active = ladder.find((b) => b.state === "active");
   const completed = ladder.filter((b) => b.state === "completed");
@@ -124,6 +129,34 @@ export default async function StudentProfilePage({ params }: PageProps<"/admin/s
           {org.org_name && <span className="text-xs text-muted-foreground">Issued by {org.org_name}</span>}
         </section>
       )}
+
+      <section aria-labelledby="cert-h" className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="cert-h" className="text-lg font-bold">Certificates ({certificates.length})</h2>
+          {s.batch_id && (
+            <IssueCompletionCertificateButton studentId={s.id} batchId={s.batch_id} batchName={s.batches?.name ?? "this program"} alreadyIssued={!!liveCompletionCert} />
+          )}
+        </div>
+        {certificates.length === 0 ? <EmptyState title="No certificates issued yet" /> : (
+          <ul className="space-y-2">
+            {certificates.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3">
+                <div className="min-w-0">
+                  <p className="font-medium">
+                    {c.certificate_type === "completion" ? c.batch_name : c.badge_name}
+                    <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 text-xs capitalize text-secondary-foreground">{c.certificate_type}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">{c.certificate_number} · Issued {formatPkt(c.issued_at)}{c.revoked_at ? ` · Revoked: ${c.revoke_reason}` : ""}</p>
+                </div>
+                <div className="flex gap-2">
+                  {!c.revoked_at && <a className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium hover:bg-secondary" href={`/api/certificates/${c.certificate_number}/pdf`}>PDF</a>}
+                  <CertificateActions id={c.id} revoked={!!c.revoked_at} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section aria-labelledby="proj-h" className="space-y-3">
         <h2 id="proj-h" className="text-xl font-bold">Project history ({projects.length})</h2>

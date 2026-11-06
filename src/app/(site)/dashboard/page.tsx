@@ -5,6 +5,7 @@ import { requireStudentPage } from "@/lib/student-session";
 import { getMyWindows } from "@/lib/my-deadlines";
 import { WindowsSummary } from "@/components/student/SubmissionWindow";
 import { BadgeMedal } from "@/components/BadgeMedal";
+import { DashboardProfileHeader } from "@/components/DashboardProfileHeader";
 import { Button } from "@/components/ui/button";
 import { EmptyState, StatusPill } from "@/components/ui/field";
 import type { BadgeProgress, CertificateRow, SubmissionRow } from "@/lib/workflow-types";
@@ -30,6 +31,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      <DashboardProfileHeader
+        name={student.name}
+        imageUrl={student.image_url}
+        track={student.track}
+        badge={student.badge}
+        progress={progress}
+      />
+
       {!profileDone && (
         <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/10 p-5">
           <div>
@@ -93,7 +102,7 @@ export default async function DashboardPage() {
             {certs.map((c) => (
               <li key={c.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 shadow-(--shadow-card)">
                 <div className="min-w-0">
-                  <p className="font-semibold">{c.badge_name}</p>
+                  <p className="font-semibold">{c.certificate_type === "completion" ? c.batch_name : c.badge_name}</p>
                   <p className="truncate text-xs text-muted-foreground">{c.certificate_number}</p>
                 </div>
                 <div className="flex gap-2">
